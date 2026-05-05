@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Toast } from './ui/toast';
 import { AlertTriangle, Upload, X } from 'lucide-react';
 import { Alert, AlertDescription } from './ui/alert';
-import { parseStoredJson, validateReportData } from '../appState';
+import { parseStoredJson, validateReportData, compressImage } from '../appState';
 
 interface ReportLostFormProps {
   onSubmit: (item: any) => void;
@@ -120,16 +120,16 @@ export function ReportLostForm({ onSubmit, onRequireLogin, isLoggedIn }: ReportL
     setIsSubmitting(false);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        setImagePreview(result);
-        setFormData(prev => ({ ...prev, image: result }));
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressedImage = await compressImage(file, 800, 0.7);
+        setImagePreview(compressedImage);
+        setFormData(prev => ({ ...prev, image: compressedImage }));
+      } catch (error) {
+        console.error("Gagal mengkompres gambar:", error);
+      }
     }
   };
 
@@ -239,7 +239,7 @@ export function ReportLostForm({ onSubmit, onRequireLogin, isLoggedIn }: ReportL
                 type="email"
                 value={formData.contact}
                 onChange={(e) => setFormData(prev => ({ ...prev, contact: e.target.value }))}
-                placeholder="Email atau nomor WhatsApp"
+                placeholder="Email"
                 required
               />
             </div>

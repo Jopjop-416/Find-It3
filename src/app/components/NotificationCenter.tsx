@@ -11,6 +11,7 @@ interface Notification {
   type: 'match' | 'verification' | 'success' | 'info';
   date: string;
   read: boolean;
+  userEmail?: string;
 }
 
 interface NotificationCenterProps {
@@ -220,50 +221,6 @@ export function NotificationCenter({ notifications, onMarkAsRead, onDeleteNotifi
           </CardContent>
         </Card>
       )}
-
-      {/* Notification Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Pengaturan Notifikasi</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="font-medium">Notifikasi Email</h4>
-              <p className="text-sm text-muted-foreground">
-                Dapatkan email ketika ada barang yang cocok dengan laporan Anda
-              </p>
-            </div>
-            <Button variant="outline" size="sm">
-              Aktifkan
-            </Button>
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="font-medium">Notifikasi Push</h4>
-              <p className="text-sm text-muted-foreground">
-                Dapatkan notifikasi langsung di browser
-              </p>
-            </div>
-            <Button variant="outline" size="sm">
-              Aktifkan
-            </Button>
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="font-medium">Ringkasan Mingguan</h4>
-              <p className="text-sm text-muted-foreground">
-                Dapatkan ringkasan aktivitas Lost & Found setiap minggu
-              </p>
-            </div>
-            <Button variant="outline" size="sm">
-              Aktifkan
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
       </div>
     </>
   );

@@ -23,6 +23,7 @@ import {
   parseStoredJson,
   type UserData,
 } from './appState';
+import { supabase } from '../lib/supabase';
 
 const mockItemsData = [
     {
@@ -129,50 +130,54 @@ const mockNotifications = [
     message: 'Barang yang sesuai dengan laporan Anda ditemukan: iPhone 14 Pro',
     type: 'match',
     date: '2024-09-23',
-    read: false
+    read: false,
+    userEmail: 'admin@gmail.com'
   },
   {
     id: 2,
     message: 'Laporan kehilangan Anda telah diverifikasi oleh admin',
     type: 'verification',
     date: '2024-09-22',
-    read: true
+    read: true,
+    userEmail: 'admin@gmail.com'
   },
   {
     id: 3,
     message: 'Dompet coklat yang Anda laporkan telah ditemukan di Perpustakaan Pusat',
     type: 'match',
     date: '2024-09-21',
-    read: true
+    read: true,
+    userEmail: 'admin@gmail.com'
   },
   {
     id: 4,
     message: 'Laporan penemuan barang berhasil disubmit dan sedang ditinjau',
     type: 'success',
     date: '2024-09-20',
-    read: true
+    read: true,
+    userEmail: 'admin@gmail.com'
   },
   {
     id: 5,
     message: 'Barang yang Anda temukan telah diklaim oleh pemiliknya',
     type: 'info',
     date: '2024-09-19',
-    read: true
+    read: true,
+    userEmail: 'admin@gmail.com'
   },
   {
     id: 6,
     message: 'Laporan Anda akan dihapus otomatis dalam 30 hari jika tidak ada klaim',
     type: 'info',
     date: '2024-09-18',
-    read: true
+    read: true,
+    userEmail: 'admin@gmail.com'
   }
 ];
 
 export default function App() {
   const [currentView, setCurrentView] = useState('dashboard');
-  const [items, setItems] = useState(() =>
-    parseStoredJson(localStorage.getItem('items'), mockItemsData)
-  );
+  const [items, setItems] = useState<any[]>([]);
   const [notifications, setNotifications] = useState(() => {
     return parseStoredJson(localStorage.getItem('notifications'), mockNotifications);
   });
@@ -195,20 +200,43 @@ export default function App() {
     localStorage.setItem('userData', JSON.stringify(userData));
   }, [isLoggedIn, userData]);
 
-  // Save items and notifications to localStorage
+  // Ambil data barang dari Supabase saat aplikasi dimuat
   useEffect(() => {
-    localStorage.setItem('items', JSON.stringify(items));
-    localStorage.setItem('notifications', JSON.stringify(notifications));
-  }, [items, notifications]);
-
-  const addItem = (newItem: any) => {
-    const item = {
-      ...newItem,
-      id: Date.now(),
-      date: new Date().toISOString().split('T')[0],
-      status: newItem.type === 'lost' ? 'active' : 'available'
+    const fetchItems = async () => {
+      const { data, error } = await supabase
+        .from('items')
+        .select('*')
+        .order('id', { ascending: false });
+      
+      if (error) console.error('Error fetching items:', error);
+      else if (data) setItems(data);
     };
-    setItems((currentItems) => [item, ...currentItems]);
+    fetchItems();
+  }, []);
+
+  // Save notifications to localStorage
+  useEffect(() => {
+    localStorage.setItem('notifications', JSON.stringify(notifications));
+  }, [notifications]);
+
+  const addItem = async (newItem: any) => {
+    const itemToInsert = {
+      ...newItem,
+      status: newItem.type === 'lost' ? 'active' : 'available',
+      date: new Date().toISOString().split('T')[0]
+    };
+
+    const { data, error } = await supabase.from('items').insert([itemToInsert]).select();
+    
+    if (error) {
+      console.error('Error inserting item:', error);
+      alert('Terjadi kesalahan saat menyimpan data ke database.');
+      return;
+    }
+    
+    if (data && data.length > 0) {
+      setItems((currentItems) => [data[0], ...currentItems]);
+    }
     
     // Add notification for successful submission
     const notification = {
@@ -216,21 +244,29 @@ export default function App() {
       message: `Laporan ${newItem.type === 'lost' ? 'kehilangan' : 'penemuan'} berhasil disubmit`,
       type: 'success',
       date: new Date().toISOString().split('T')[0],
-      read: false
+      read: false,
+      userEmail: userData.email
     };
     setNotifications((currentNotifications) => [notification, ...currentNotifications]);
   };
 
-  const updateItemStatus = (id: number, status: string) => {
+  const updateItemStatus = async (id: number, status: string) => {
     if (!isLoggedIn) {
       localStorage.setItem('redirectAfterLogin', currentView);
       setCurrentView('login');
       return;
     }
 
-    setItems((currentItems) => currentItems.map(item =>
-      item.id === id ? { ...item, status } : item
-    ));
+    const { error } = await supabase.from('items').update({ status }).eq('id', id);
+    
+    if (error) {
+      console.error('Error updating item:', error);
+      alert('Terjadi kesalahan saat mengupdate status di database.');
+    } else {
+      setItems((currentItems) => currentItems.map(item =>
+        item.id === id ? { ...item, status } : item
+      ));
+    }
   };
 
   const markNotificationAsRead = (id: number) => {
@@ -243,7 +279,8 @@ export default function App() {
     setNotifications(notifications.filter(notif => notif.id !== id));
   };
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const currentUserNotifications = notifications.filter((n: any) => n.userEmail === userData.email);
+  const unreadCount = currentUserNotifications.filter((n: any) => !n.read).length;
 
   const handleLogout = () => {
     setIsLoggedIn(false);
@@ -251,7 +288,22 @@ export default function App() {
     setCurrentView('dashboard');
   };
 
-  const handleUpdateProfile = (data: { email: string; name: string; avatar?: string }) => {
+  const handleUpdateProfile = async (data: { email: string; name: string; avatar?: string }) => {
+    // Update metadata user di Supabase (seperti nama dan avatar_url)
+    const { error } = await supabase.auth.updateUser({
+      data: { 
+        name: data.name, 
+        full_name: data.name,
+        username: data.name,
+        avatar_url: data.avatar 
+      }
+    });
+
+    if (error) {
+      alert("Gagal memperbarui profile: " + error.message);
+      return;
+    }
+
     const updatedData = {
       ...userData,
       email: data.email,
@@ -267,7 +319,8 @@ export default function App() {
       message: 'Profile berhasil diperbarui',
       type: 'success',
       date: new Date().toISOString().split('T')[0],
-      read: false
+      read: false,
+      userEmail: data.email
     };
     setNotifications((currentNotifications) => [notification, ...currentNotifications]);
   };
@@ -305,7 +358,8 @@ export default function App() {
       message: 'Password berhasil diubah',
       type: 'success',
       date: new Date().toISOString().split('T')[0],
-      read: false
+      read: false,
+      userEmail: userData.email
     };
     setNotifications((currentNotifications) => [notification, ...currentNotifications]);
 
@@ -334,7 +388,8 @@ export default function App() {
       message: 'Akun berhasil dihapus',
       type: 'success',
       date: new Date().toISOString().split('T')[0],
-      read: false
+      read: false,
+      userEmail: userData.email
     };
     setNotifications((currentNotifications) => [notification, ...currentNotifications]);
 
@@ -560,7 +615,7 @@ export default function App() {
 
         {currentView === 'notifications' && (
           <NotificationCenter
-            notifications={notifications}
+            notifications={currentUserNotifications}
             onMarkAsRead={markNotificationAsRead}
             onDeleteNotification={deleteNotification}
           />
@@ -573,29 +628,17 @@ export default function App() {
         {currentView === 'login' && (
           <LoginPage
             onLoginSuccess={async (email?: string) => {
-              const registeredUser = getStoredUser();
-              const isRegisteredUser = registeredUser?.email === email;
-              const passwordHash = isRegisteredUser
-                ? registeredUser.passwordHash || (registeredUser.password ? await createPasswordHash(registeredUser.password) : '')
-                : await createPasswordHash('password123');
-
-              if (isRegisteredUser && registeredUser.password) {
-                localStorage.setItem(
-                  'registeredUser',
-                  JSON.stringify({
-                    email: registeredUser.email,
-                    username: registeredUser.username,
-                    passwordHash,
-                  })
-                );
-              }
+              // Mengambil detail profil pengguna langsung dari sesi Supabase
+              const { data: { session } } = await supabase.auth.getSession();
+              const user = session?.user;
+              const userName = user?.user_metadata?.name || user?.user_metadata?.username || email?.split('@')[0] || 'User';
+              const userAvatar = user?.user_metadata?.avatar_url || '';
 
               setIsLoggedIn(true);
               setUserData({
-                email: email || 'admin@gmail.com',
-                name: isRegisteredUser ? registeredUser.username : 'Admin Dashboard',
-                avatar: '',
-                passwordHash,
+                email: email || user?.email || '',
+                name: userName,
+                avatar: userAvatar,
               });
 
               // Check if there's a redirect after login

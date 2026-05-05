@@ -5,7 +5,7 @@ import { Label } from "./ui/label";
 import { Checkbox } from "./ui/checkbox";
 import foundItLogo from "figma:asset/6e20ff767bc819bcb65b83fac10d99d01f0c4fd8.png";
 import ummCampusImage from "../../imports/umm1.png";
-import { getStoredUser, isPasswordMatch } from "../appState";
+import { supabase } from "../../lib/supabase";
 
 interface LoginPageProps {
   onLoginSuccess?: (email?: string) => void | Promise<void>;
@@ -22,18 +22,14 @@ export function LoginPage({ onLoginSuccess, onSwitchToRegister }: LoginPageProps
 
     if (!email || !password) return;
 
-    const registeredUser = getStoredUser();
+    // Proses login menggunakan Supabase Auth
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-    const isRegisteredUser =
-      registeredUser?.email === email &&
-      (await isPasswordMatch(
-        password,
-        registeredUser.passwordHash || registeredUser.password,
-      ));
-    const isDemoUser = email === "admin@gmail.com" && password === "password123";
-
-    if (!isRegisteredUser && !isDemoUser) {
-      alert("Email atau password salah.");
+    if (error) {
+      alert("Email atau password salah. (" + error.message + ")");
       return;
     }
 
@@ -122,13 +118,13 @@ export function LoginPage({ onLoginSuccess, onSwitchToRegister }: LoginPageProps
                   Remember me
                 </Label>
               </div>
-              <a
-                href="#"
+              <button
+                type="button"
                 className="text-sm text-gray-600 hover:text-orange-600 transition-colors"
               >
                 Forgot password?{" "}
                 <span className="text-orange-600 font-medium">Change now</span>
-              </a>
+              </button>
             </div>
 
             {/* Sign In Button */}
@@ -193,16 +189,15 @@ export function LoginPage({ onLoginSuccess, onSwitchToRegister }: LoginPageProps
             {/* Sign Up Link */}
             <p className="text-center text-sm text-gray-600">
               Don't have an account?{" "}
-              <a
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
+              <button
+                type="button"
+                onClick={() => {
                   onSwitchToRegister?.();
                 }}
                 className="text-orange-600 font-medium hover:text-orange-700"
               >
                 Sign up
-              </a>
+              </button>
             </p>
           </form>
         </div>

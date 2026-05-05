@@ -7,6 +7,7 @@ import { Toast } from "./ui/toast";
 import { ChangePasswordDialog } from "./ChangePasswordDialog";
 import { DeleteAccountDialog } from "./DeleteAccountDialog";
 import { User, Camera, Mail, Phone, MapPin, Save } from "lucide-react";
+import { compressImage } from "../appState";
 
 interface ProfilePageProps {
   userData: {
@@ -40,24 +41,26 @@ export function ProfilePage({ userData, onUpdateProfile, onChangePassword, onDel
       .slice(0, 2);
   };
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        setPreviewUrl(result);
-        setAvatar(result);
-        // Auto-save avatar immediately
+      try {
+        const compressedImage = await compressImage(file, 400, 0.8);
+        setPreviewUrl(compressedImage);
+        setAvatar(compressedImage);
+        
         onUpdateProfile({
           email,
           name,
-          avatar: result,
+          avatar: compressedImage,
         });
+        
         setToastMessage("Foto profile berhasil diubah!");
         setShowToast(true);
-      };
-      reader.readAsDataURL(file);
+      } catch (error) {
+        setToastMessage("Gagal memproses foto.");
+        setShowToast(true);
+      }
     }
   };
 

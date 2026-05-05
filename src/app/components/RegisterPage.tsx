@@ -5,7 +5,7 @@ import { Label } from "./ui/label";
 import { Toast } from "./ui/toast";
 import foundItLogo from "figma:asset/6e20ff767bc819bcb65b83fac10d99d01f0c4fd8.png";
 import ummCampusImage from "../../imports/umm1.png";
-import { createPasswordHash } from "../appState";
+import { supabase } from "../../lib/supabase";
 
 interface RegisterPageProps {
   onRegisterSuccess?: () => void;
@@ -38,14 +38,23 @@ export function RegisterPage({
       return;
     }
 
-    localStorage.setItem(
-      "registeredUser",
-      JSON.stringify({
-        email: trimmedEmail,
-        username: trimmedUsername,
-        passwordHash: await createPasswordHash(password),
-      }),
-    );
+    // Proses registrasi menggunakan Supabase Auth
+    const { data, error } = await supabase.auth.signUp({
+      email: trimmedEmail,
+      password: password,
+      options: {
+        data: {
+          username: trimmedUsername,
+          name: trimmedUsername,
+          full_name: trimmedUsername,
+        },
+      },
+    });
+
+    if (error) {
+      alert("Gagal registrasi: " + error.message);
+      return;
+    }
 
     setShowToast(true);
 
@@ -223,16 +232,15 @@ export function RegisterPage({
 
               <p className="text-center text-sm text-gray-600">
                 Already have an account?{" "}
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
+                <button
+                  type="button"
+                  onClick={() => {
                     onSwitchToLogin?.();
                   }}
                   className="text-orange-600 font-medium hover:text-orange-700"
                 >
                   Log In
-                </a>
+                </button>
               </p>
             </form>
           </div>
