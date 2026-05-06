@@ -19,6 +19,13 @@ import {
 } from "lucide-react";
 
 export function ContactInfo() {
+  const campusMapEmbedUrl =
+    "https://www.google.com/maps?q=Universitas%20Muhammadiyah%20Malang%20Kampus%203%2C%20Jl.%20Raya%20Tlogomas%20No.246%2C%20Malang&z=17&output=embed";
+  const campusMapUrl =
+    "https://www.google.com/maps/search/?api=1&query=Universitas%20Muhammadiyah%20Malang%20Kampus%203%2C%20Jl.%20Raya%20Tlogomas%20No.246%2C%20Malang";
+  const campusDirectionsUrl =
+    "https://www.google.com/maps/dir/?api=1&destination=Universitas%20Muhammadiyah%20Malang%20Kampus%203%2C%20Jl.%20Raya%20Tlogomas%20No.246%2C%20Malang";
+
   const contactPoints = [
     {
       title: "Sekretariat & Keamanan Utama UMM",
@@ -338,26 +345,27 @@ export function ContactInfo() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="bg-muted rounded-lg h-48 flex items-center justify-center">
-              <div className="text-center text-muted-foreground">
-                <MapPin className="w-12 h-12 mx-auto mb-2" />
-                <p>
-                  Peta Lokasi Kampus Universitas Muhammadiyah
-                  Malang
-                </p>
-                <p className="text-sm">
-                  Jl. Raya Tlogomas No.246, Malang, Jawa Timur
-                  65144
-                </p>
-              </div>
+            <div className="bg-muted rounded-lg h-64 overflow-hidden">
+              <iframe
+                src={campusMapEmbedUrl}
+                title="Peta Lokasi Kampus Universitas Muhammadiyah Malang"
+                className="h-full w-full border-0"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+              />
             </div>
             <div className="flex space-x-2">
-              <Button variant="outline" className="flex-1">
+              <Button variant="outline" className="flex-1" asChild>
+                <a href={campusMapUrl} target="_blank" rel="noreferrer">
                 <MapPin className="w-4 h-4 mr-2" />
                 Buka Google Maps
+                </a>
               </Button>
-              <Button variant="outline" className="flex-1">
+              <Button variant="outline" className="flex-1" asChild>
+                <a href={campusDirectionsUrl} target="_blank" rel="noreferrer">
                 Petunjuk Arah
+                </a>
               </Button>
             </div>
           </div>

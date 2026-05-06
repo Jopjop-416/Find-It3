@@ -17,9 +17,7 @@ import { ProfilePage } from './components/ProfilePage';
 import { ImageWithFallback } from './components/figma/ImageWithFallback';
 import foundItLogo from 'figma:asset/6e20ff767bc819bcb65b83fac10d99d01f0c4fd8.png';
 import {
-  createPasswordHash,
-  getStoredUser,
-  isPasswordMatch,
+  buildUserDataFromAuthUser,
   parseStoredJson,
   type UserData,
 } from './appState';
@@ -175,6 +173,12 @@ const mockNotifications = [
   }
 ];
 
+const emptyUserData: UserData = {
+  email: '',
+  name: '',
+  avatar: '',
+};
+
 export default function App() {
   const [currentView, setCurrentView] = useState('dashboard');
   const [items, setItems] = useState<any[]>([]);
@@ -182,23 +186,33 @@ export default function App() {
     return parseStoredJson(localStorage.getItem('notifications'), mockNotifications);
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return parseStoredJson(localStorage.getItem('isLoggedIn'), false);
-  });
-  const [userData, setUserData] = useState<UserData>(() =>
-    parseStoredJson(localStorage.getItem('userData'), {
-      email: '',
-      name: '',
-      avatar: '',
-      passwordHash: '',
-    })
-  );
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userData, setUserData] = useState<UserData>(emptyUserData);
 
-  // Save to localStorage whenever userData or isLoggedIn changes
+  // Mirror Supabase Auth into React state. Do not trust localStorage for auth.
   useEffect(() => {
-    localStorage.setItem('isLoggedIn', JSON.stringify(isLoggedIn));
-    localStorage.setItem('userData', JSON.stringify(userData));
-  }, [isLoggedIn, userData]);
+    let isMounted = true;
+
+    const syncSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!isMounted) return;
+
+      setIsLoggedIn(Boolean(session?.user));
+      setUserData(session?.user ? buildUserDataFromAuthUser(session.user) : emptyUserData);
+    };
+
+    syncSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(Boolean(session?.user));
+      setUserData(session?.user ? buildUserDataFromAuthUser(session.user) : emptyUserData);
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // Ambil data barang dari Supabase saat aplikasi dimuat
   useEffect(() => {
@@ -220,6 +234,14 @@ export default function App() {
   }, [notifications]);
 
   const addItem = async (newItem: any) => {
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session?.user) {
+      localStorage.setItem('redirectAfterLogin', currentView);
+      setCurrentView('login');
+      return;
+    }
+
     const itemToInsert = {
       ...newItem,
       status: newItem.type === 'lost' ? 'active' : 'available',
@@ -251,7 +273,9 @@ export default function App() {
   };
 
   const updateItemStatus = async (id: number, status: string) => {
-    if (!isLoggedIn) {
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session?.user) {
       localStorage.setItem('redirectAfterLogin', currentView);
       setCurrentView('login');
       return;
@@ -282,36 +306,54 @@ export default function App() {
   const currentUserNotifications = notifications.filter((n: any) => n.userEmail === userData.email);
   const unreadCount = currentUserNotifications.filter((n: any) => !n.read).length;
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      alert('Gagal logout: ' + error.message);
+      return;
+    }
+
     setIsLoggedIn(false);
-    setUserData({ email: '', name: '', avatar: '', passwordHash: '' });
+    setUserData(emptyUserData);
     setCurrentView('dashboard');
   };
 
   const handleUpdateProfile = async (data: { email: string; name: string; avatar?: string }) => {
-    // Update metadata user di Supabase (seperti nama dan avatar_url)
-    const { error } = await supabase.auth.updateUser({
-      data: { 
+    const trimmedEmail = data.email.trim();
+    const updatePayload: Parameters<typeof supabase.auth.updateUser>[0] = {
+      data: {
         name: data.name, 
         full_name: data.name,
         username: data.name,
         avatar_url: data.avatar 
       }
-    });
+    };
+
+    if (trimmedEmail && trimmedEmail !== userData.email) {
+      updatePayload.email = trimmedEmail;
+    }
+
+    const { data: authData, error } = await supabase.auth.updateUser(updatePayload);
 
     if (error) {
       alert("Gagal memperbarui profile: " + error.message);
       return;
     }
 
-    const updatedData = {
-      ...userData,
-      email: data.email,
-      name: data.name,
-      avatar: data.avatar || userData.avatar
-    };
+    const updatedData = authData.user
+      ? buildUserDataFromAuthUser(authData.user)
+      : {
+          ...userData,
+          name: data.name,
+          avatar: data.avatar || userData.avatar,
+        };
+
     setUserData(updatedData);
-    // Data akan otomatis tersimpan ke localStorage melalui useEffect
+
+    if (trimmedEmail && trimmedEmail !== userData.email) {
+      alert('Jika konfirmasi email aktif, cek email baru Anda untuk menyelesaikan perubahan alamat email.');
+    }
 
     // Add notification for successful profile update
     const notification = {
@@ -320,36 +362,33 @@ export default function App() {
       type: 'success',
       date: new Date().toISOString().split('T')[0],
       read: false,
-      userEmail: data.email
+      userEmail: updatedData.email
     };
     setNotifications((currentNotifications) => [notification, ...currentNotifications]);
   };
 
   const handleChangePassword = async (oldPassword: string, newPassword: string): Promise<boolean> => {
-    const storedPassword = userData.passwordHash || userData.password;
+    const { data: { user } } = await supabase.auth.getUser();
+    const email = user?.email ?? userData.email;
 
-    if (!(await isPasswordMatch(oldPassword, storedPassword))) {
+    if (!email) {
       return false;
     }
 
-    const passwordHash = await createPasswordHash(newPassword);
-    const updatedData = {
-      ...userData,
-      passwordHash,
-      password: undefined
-    };
-    setUserData(updatedData);
+    const { error: verifyError } = await supabase.auth.signInWithPassword({
+      email,
+      password: oldPassword,
+    });
 
-    const registeredUser = getStoredUser();
-    if (registeredUser?.email === userData.email) {
-      localStorage.setItem(
-        'registeredUser',
-        JSON.stringify({
-          email: registeredUser.email,
-          username: registeredUser.username,
-          passwordHash,
-        })
-      );
+    if (verifyError) {
+      return false;
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+    if (error) {
+      alert('Gagal mengubah password: ' + error.message);
+      return false;
     }
 
     // Add notification
@@ -366,20 +405,34 @@ export default function App() {
     return true;
   };
 
-  const handleDeleteAccount = (confirmation: string, email: string): boolean => {
+  const handleDeleteAccount = async (confirmation: string, email: string): Promise<boolean> => {
     if (confirmation !== 'delete akun' || email !== userData.email) {
       return false;
     }
 
-    // Clear all user data from localStorage
-    localStorage.removeItem('userData');
-    localStorage.removeItem('isLoggedIn');
+    const { error: deleteError } = await supabase.functions.invoke('delete-account', {
+      method: 'POST',
+    });
+
+    if (deleteError) {
+      alert('Gagal menghapus akun di backend: ' + deleteError.message);
+      return false;
+    }
+
+    const { error: signOutError } = await supabase.auth.signOut({ scope: 'global' });
+
+    if (signOutError) {
+      alert('Permintaan hapus akun tersimpan, tetapi logout gagal: ' + signOutError.message);
+      return false;
+    }
+
+    // Clear app-only cached data. Supabase Auth storage is cleared by signOut().
     localStorage.removeItem('registeredUser');
     localStorage.removeItem('redirectAfterLogin');
 
     // Reset state
     setIsLoggedIn(false);
-    setUserData({ email: '', name: '', avatar: '', passwordHash: '' });
+    setUserData(emptyUserData);
     setCurrentView('dashboard');
 
     // Add notification
@@ -664,7 +717,7 @@ export default function App() {
           />
         )}
 
-        {currentView === 'profile' && (
+        {currentView === 'profile' && isLoggedIn && (
           <ProfilePage
             userData={userData}
             onUpdateProfile={handleUpdateProfile}

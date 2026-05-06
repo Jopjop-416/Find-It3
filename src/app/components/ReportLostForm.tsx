@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Toast } from './ui/toast';
 import { AlertTriangle, Upload, X } from 'lucide-react';
 import { Alert, AlertDescription } from './ui/alert';
-import { parseStoredJson, validateReportData, compressImage } from '../appState';
+import { parseStoredJson, validateReportData, compressImage, validateImageFile } from '../appState';
 
 interface ReportLostFormProps {
   onSubmit: (item: any) => void;
@@ -123,6 +123,13 @@ export function ReportLostForm({ onSubmit, onRequireLogin, isLoggedIn }: ReportL
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      const validation = validateImageFile(file);
+      if (!validation.isValid) {
+        setValidationError(validation.message);
+        e.target.value = '';
+        return;
+      }
+
       try {
         const compressedImage = await compressImage(file, 800, 0.7);
         setImagePreview(compressedImage);

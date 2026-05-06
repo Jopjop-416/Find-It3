@@ -204,9 +204,9 @@ export function Dashboard({
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-[repeat(5,minmax(0,1fr))] gap-3">
           {items.map((item) => (
             <Dialog key={item.id}>
-              <DialogTrigger className="text-left w-full">
-                <Card className="cursor-pointer overflow-hidden transition-all duration-500 ease-in-out hover:-translate-y-1">
-                  <div className="relative h-48">
+              <DialogTrigger className="text-left w-full h-full">
+                <Card className="h-full cursor-pointer overflow-hidden transition-all duration-500 ease-in-out hover:-translate-y-1 flex flex-col">
+                  <div className="relative h-48 shrink-0">
                     <ImageWithFallback
                       src={item.image}
                       alt={item.title}
@@ -228,13 +228,15 @@ export function Dashboard({
                     {/* Category Badge - Top Right */}
                     <Badge
                       variant="secondary"
-                      className="absolute top-3 right-3 bg-white/90 text-gray-800 hover:bg-white text-[10px] px-2 py-0.5"
+                      className="absolute top-3 right-3 max-w-[45%] bg-white/90 text-gray-800 hover:bg-white text-[10px] px-2 py-0.5"
                     >
-                      {item.category}
+                      <span className="line-clamp-1 break-all">
+                        {item.category}
+                      </span>
                     </Badge>
                   </div>
 
-                  <CardContent className="p-4 pt-1">
+                  <CardContent className="p-4 pt-1 flex flex-1 flex-col">
                     <h3 className="font-semibold mb-2 text-base line-clamp-1">
                       {item.title}
                     </h3>
@@ -243,12 +245,14 @@ export function Dashboard({
                     </p>
 
                     <div className="space-y-1.5 mb-3">
-                      <div className="flex items-center text-xs text-muted-foreground">
-                        <MapPin className="w-3.5 h-3.5 mr-1.5 text-orange-500" />
-                        {item.location}
+                      <div className="flex items-center min-w-0 text-xs text-muted-foreground">
+                        <MapPin className="w-3.5 h-3.5 mr-1.5 shrink-0 text-orange-500" />
+                        <span className="line-clamp-1">
+                          {item.location}
+                        </span>
                       </div>
                       <div className="flex items-center text-xs text-muted-foreground">
-                        <Calendar className="w-3.5 h-3.5 mr-1.5 text-orange-500" />
+                        <Calendar className="w-3.5 h-3.5 mr-1.5 shrink-0 text-orange-500" />
                         {new Date(
                           item.date,
                         ).toLocaleDateString("id-ID", {
@@ -267,7 +271,7 @@ export function Dashboard({
                           ? "outline"
                           : "secondary"
                       }
-                      className="text-xs"
+                      className="mt-auto w-fit text-xs"
                     >
                       {item.status === "active" &&
                         "Masih Dicari"}

@@ -7,7 +7,7 @@ import { Toast } from "./ui/toast";
 import { ChangePasswordDialog } from "./ChangePasswordDialog";
 import { DeleteAccountDialog } from "./DeleteAccountDialog";
 import { User, Camera, Mail, Phone, MapPin, Save } from "lucide-react";
-import { compressImage } from "../appState";
+import { compressImage, validateImageFile } from "../appState";
 
 interface ProfilePageProps {
   userData: {
@@ -17,7 +17,7 @@ interface ProfilePageProps {
   };
   onUpdateProfile: (data: { email: string; name: string; avatar?: string }) => void;
   onChangePassword: (oldPassword: string, newPassword: string) => boolean | Promise<boolean>;
-  onDeleteAccount: (confirmation: string, email: string) => boolean;
+  onDeleteAccount: (confirmation: string, email: string) => boolean | Promise<boolean>;
 }
 
 export function ProfilePage({ userData, onUpdateProfile, onChangePassword, onDeleteAccount }: ProfilePageProps) {
@@ -44,6 +44,14 @@ export function ProfilePage({ userData, onUpdateProfile, onChangePassword, onDel
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      const validation = validateImageFile(file);
+      if (!validation.isValid) {
+        setToastMessage(validation.message);
+        setShowToast(true);
+        e.target.value = "";
+        return;
+      }
+
       try {
         const compressedImage = await compressImage(file, 400, 0.8);
         setPreviewUrl(compressedImage);
@@ -84,8 +92,8 @@ export function ProfilePage({ userData, onUpdateProfile, onChangePassword, onDel
     return success;
   };
 
-  const handleDeleteAccountSuccess = (confirmation: string, emailInput: string) => {
-    return onDeleteAccount(confirmation, emailInput);
+  const handleDeleteAccountSuccess = async (confirmation: string, emailInput: string) => {
+    return await onDeleteAccount(confirmation, emailInput);
   };
 
   return (

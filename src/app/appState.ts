@@ -9,8 +9,6 @@ export type UserData = {
   email: string;
   name: string;
   avatar: string;
-  passwordHash?: string;
-  password?: string;
 };
 
 export type ReportFormData = {
@@ -32,6 +30,27 @@ export function parseStoredJson<T>(value: string | null, fallback: T): T {
   } catch {
     return fallback;
   }
+}
+
+type SupabaseAuthUserLike = {
+  email?: string | null;
+  user_metadata?: Record<string, unknown> | null;
+};
+
+export function buildUserDataFromAuthUser(user: SupabaseAuthUserLike | null | undefined): UserData {
+  const email = user?.email ?? "";
+  const metadata = user?.user_metadata ?? {};
+  const metadataName = metadata.name ?? metadata.full_name ?? metadata.username;
+  const metadataAvatar = metadata.avatar_url ?? metadata.avatar;
+
+  return {
+    email,
+    name:
+      typeof metadataName === "string" && metadataName.trim()
+        ? metadataName
+        : email.split("@")[0] || "User",
+    avatar: typeof metadataAvatar === "string" ? metadataAvatar : "",
+  };
 }
 
 export async function createPasswordHash(password: string): Promise<string> {
@@ -76,6 +95,35 @@ export function validateReportData(formData: ReportFormData): {
     return {
       isValid: false,
       message: "Kategori dan lokasi wajib dipilih.",
+    };
+  }
+
+  return {
+    isValid: true,
+    message: "",
+  };
+}
+
+export function validateImageFile(
+  file: Pick<File, "size" | "type">,
+  maxBytes = 2 * 1024 * 1024,
+): {
+  isValid: boolean;
+  message: string;
+} {
+  const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+  if (!allowedTypes.has(file.type)) {
+    return {
+      isValid: false,
+      message: "Format gambar harus JPG, PNG, atau WebP.",
+    };
+  }
+
+  if (file.size > maxBytes) {
+    return {
+      isValid: false,
+      message: "Ukuran gambar maksimal 2MB.",
     };
   }
 

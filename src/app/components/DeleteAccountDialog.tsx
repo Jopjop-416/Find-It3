@@ -14,7 +14,7 @@ import { AlertTriangle } from "lucide-react";
 interface DeleteAccountDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onDeleteAccount: (confirmation: string, email: string) => boolean;
+  onDeleteAccount: (confirmation: string, email: string) => boolean | Promise<boolean>;
   userEmail: string;
 }
 
@@ -27,8 +27,9 @@ export function DeleteAccountDialog({
   const [confirmationText, setConfirmationText] = useState("");
   const [emailInput, setEmailInput] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -44,7 +45,9 @@ export function DeleteAccountDialog({
     }
 
     // Call parent function to delete account
-    const success = onDeleteAccount(confirmationText, emailInput);
+    setIsSubmitting(true);
+    const success = await onDeleteAccount(confirmationText, emailInput);
+    setIsSubmitting(false);
 
     if (success) {
       // Reset form and close
@@ -126,9 +129,10 @@ export function DeleteAccountDialog({
             </Button>
             <Button
               type="submit"
+              disabled={isSubmitting}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
-              Hapus Akun Permanen
+              {isSubmitting ? "Memproses..." : "Kirim Permintaan Hapus Akun"}
             </Button>
           </div>
         </form>
