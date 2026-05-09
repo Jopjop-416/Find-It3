@@ -22,8 +22,13 @@ export function LoginPage({ onLoginSuccess, onSwitchToRegister }: LoginPageProps
 
     if (!email || !password) return;
 
+    if (!supabase) {
+      alert("Supabase belum dikonfigurasi. Tambahkan environment variables di Vercel terlebih dahulu.");
+      return;
+    }
+
     // Proses login menggunakan Supabase Auth
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });

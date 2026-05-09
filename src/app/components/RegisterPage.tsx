@@ -38,8 +38,13 @@ export function RegisterPage({
       return;
     }
 
+    if (!supabase) {
+      alert("Supabase belum dikonfigurasi. Tambahkan environment variables di Vercel terlebih dahulu.");
+      return;
+    }
+
     // Proses registrasi menggunakan Supabase Auth
-    const { data, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email: trimmedEmail,
       password: password,
       options: {

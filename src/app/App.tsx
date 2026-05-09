@@ -21,7 +21,7 @@ import {
   parseStoredJson,
   type UserData,
 } from './appState';
-import { supabase } from '../lib/supabase';
+import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
 const mockItemsData = [
     {
@@ -189,8 +189,18 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState<UserData>(emptyUserData);
 
+  const alertMissingSupabaseConfig = () => {
+    alert('Supabase belum dikonfigurasi. Tambahkan VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY di environment variables Vercel.');
+  };
+
   // Mirror Supabase Auth into React state. Do not trust localStorage for auth.
   useEffect(() => {
+    if (!supabase) {
+      setIsLoggedIn(false);
+      setUserData(emptyUserData);
+      return;
+    }
+
     let isMounted = true;
 
     const syncSession = async () => {
@@ -217,6 +227,11 @@ export default function App() {
   // Ambil data barang dari Supabase saat aplikasi dimuat
   useEffect(() => {
     const fetchItems = async () => {
+      if (!supabase) {
+        setItems(mockItemsData);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('items')
         .select('*')
@@ -234,6 +249,11 @@ export default function App() {
   }, [notifications]);
 
   const addItem = async (newItem: any) => {
+    if (!supabase) {
+      alertMissingSupabaseConfig();
+      return;
+    }
+
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session?.user) {
@@ -273,6 +293,11 @@ export default function App() {
   };
 
   const updateItemStatus = async (id: number, status: string) => {
+    if (!supabase) {
+      alertMissingSupabaseConfig();
+      return;
+    }
+
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session?.user) {
@@ -307,6 +332,13 @@ export default function App() {
   const unreadCount = currentUserNotifications.filter((n: any) => !n.read).length;
 
   const handleLogout = async () => {
+    if (!supabase) {
+      setIsLoggedIn(false);
+      setUserData(emptyUserData);
+      setCurrentView('dashboard');
+      return;
+    }
+
     const { error } = await supabase.auth.signOut();
 
     if (error) {
@@ -320,8 +352,21 @@ export default function App() {
   };
 
   const handleUpdateProfile = async (data: { email: string; name: string; avatar?: string }) => {
+    if (!supabase) {
+      alertMissingSupabaseConfig();
+      return;
+    }
+
     const trimmedEmail = data.email.trim();
-    const updatePayload: Parameters<typeof supabase.auth.updateUser>[0] = {
+    const updatePayload: {
+      email?: string;
+      data: {
+        name: string;
+        full_name: string;
+        username: string;
+        avatar_url?: string;
+      };
+    } = {
       data: {
         name: data.name, 
         full_name: data.name,
@@ -368,6 +413,11 @@ export default function App() {
   };
 
   const handleChangePassword = async (oldPassword: string, newPassword: string): Promise<boolean> => {
+    if (!supabase) {
+      alertMissingSupabaseConfig();
+      return false;
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
     const email = user?.email ?? userData.email;
 
@@ -406,6 +456,11 @@ export default function App() {
   };
 
   const handleDeleteAccount = async (confirmation: string, email: string): Promise<boolean> => {
+    if (!supabase) {
+      alertMissingSupabaseConfig();
+      return false;
+    }
+
     if (confirmation !== 'delete akun' || email !== userData.email) {
       return false;
     }
@@ -627,6 +682,12 @@ export default function App() {
 
       {/* Main Content */}
       <main className={currentView === 'login' || currentView === 'register' ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}>
+        {!isSupabaseConfigured && currentView !== 'login' && currentView !== 'register' && (
+          <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            Supabase belum dikonfigurasi di environment deployment. Data demo tetap ditampilkan, tetapi login dan penyimpanan laporan belum aktif.
+          </div>
+        )}
+
         {currentView === 'dashboard' && (
           <Dashboard
             items={items}
@@ -681,6 +742,11 @@ export default function App() {
         {currentView === 'login' && (
           <LoginPage
             onLoginSuccess={async (email?: string) => {
+              if (!supabase) {
+                alertMissingSupabaseConfig();
+                return;
+              }
+
               // Mengambil detail profil pengguna langsung dari sesi Supabase
               const { data: { session } } = await supabase.auth.getSession();
               const user = session?.user;
