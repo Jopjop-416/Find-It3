@@ -27,6 +27,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "./ui/dialog";
+import {
+  buildWhatsAppUrl,
+  formatIndonesianPhoneDisplay,
+} from "../appState";
 
 interface ItemGalleryProps {
   items: any[];
@@ -378,45 +382,59 @@ export function ItemGallery({
                     </div>
                     <div className="flex items-center">
                       <User className="w-4 h-4 mr-2 text-muted-foreground" />
-                      <span>{item.contact}</span>
+                      <span>{formatIndonesianPhoneDisplay(item.contact)}</span>
                     </div>
                   </div>
                 </div>
 
-                {canUpdateStatus && (item.status === "active" ||
-                  item.status === "available") && (
-                  <div className="flex gap-2 pt-4 border-t">
-                    {item.type === "lost" && (
-                      <Button
-                        onClick={() =>
-                          handleStatusUpdate(
-                            item.id,
-                            "returned",
-                          )
-                        }
-                        className="flex-1"
-                      >
-                        Tandai Sudah Ditemukan
-                      </Button>
-                    )}
-                    {item.type === "found" && (
-                      <Button
-                        onClick={() =>
-                          handleStatusUpdate(item.id, "claimed")
-                        }
-                        className="flex-1"
-                      >
-                        Tandai Sudah Diambil
-                      </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      className="flex-1"
+                <div className="flex gap-2 pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    asChild
+                  >
+                    <a
+                      href={buildWhatsAppUrl(item.contact, item.title)}
+                      target="_blank"
+                      rel="noreferrer"
                     >
                       Hubungi Pelapor
-                    </Button>
-                  </div>
-                )}
+                    </a>
+                  </Button>
+
+                  {canUpdateStatus &&
+                    (item.status === "active" ||
+                      item.status === "available") && (
+                      <>
+                      {item.type === "lost" && (
+                        <Button
+                          onClick={() =>
+                            handleStatusUpdate(
+                              item.id,
+                              "returned",
+                            )
+                          }
+                          className="flex-1"
+                        >
+                          Tandai Sudah Ditemukan
+                        </Button>
+                      )}
+                      {item.type === "found" && (
+                        <Button
+                          onClick={() =>
+                            handleStatusUpdate(
+                              item.id,
+                              "claimed",
+                            )
+                          }
+                          className="flex-1"
+                        >
+                          Tandai Sudah Diambil
+                        </Button>
+                      )}
+                    </>
+                    )}
+                </div>
               </div>
             </DialogContent>
           </Dialog>

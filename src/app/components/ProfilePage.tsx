@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -7,15 +7,23 @@ import { Toast } from "./ui/toast";
 import { ChangePasswordDialog } from "./ChangePasswordDialog";
 import { DeleteAccountDialog } from "./DeleteAccountDialog";
 import { User, Camera, Mail, Phone, MapPin, Save } from "lucide-react";
-import { compressImage, validateImageFile } from "../appState";
+import {
+  compressImage,
+  formatIndonesianPhoneDisplay,
+  normalizeIndonesianPhone,
+  validateImageFile,
+  validateIndonesianPhone,
+} from "../appState";
 
 interface ProfilePageProps {
   userData: {
     email: string;
     name: string;
     avatar?: string;
+    phone: string;
+    address: string;
   };
-  onUpdateProfile: (data: { email: string; name: string; avatar?: string }) => void;
+  onUpdateProfile: (data: { email: string; name: string; avatar?: string; phone: string; address: string }) => Promise<boolean>;
   onChangePassword: (oldPassword: string, newPassword: string) => boolean | Promise<boolean>;
   onDeleteAccount: (confirmation: string, email: string) => boolean | Promise<boolean>;
 }
@@ -23,14 +31,23 @@ interface ProfilePageProps {
 export function ProfilePage({ userData, onUpdateProfile, onChangePassword, onDeleteAccount }: ProfilePageProps) {
   const [name, setName] = useState(userData.name);
   const [email, setEmail] = useState(userData.email);
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
+  const [phone, setPhone] = useState(formatIndonesianPhoneDisplay(userData.phone));
+  const [address, setAddress] = useState(userData.address);
   const [avatar, setAvatar] = useState<string | null>(userData.avatar || null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(userData.avatar || null);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("Perubahan berhasil disimpan!");
   const [showChangePasswordDialog, setShowChangePasswordDialog] = useState(false);
   const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
+
+  useEffect(() => {
+    setName(userData.name);
+    setEmail(userData.email);
+    setPhone(formatIndonesianPhoneDisplay(userData.phone));
+    setAddress(userData.address);
+    setAvatar(userData.avatar || null);
+    setPreviewUrl(userData.avatar || null);
+  }, [userData]);
 
   const getInitials = (name: string) => {
     return name
@@ -57,14 +74,18 @@ export function ProfilePage({ userData, onUpdateProfile, onChangePassword, onDel
         setPreviewUrl(compressedImage);
         setAvatar(compressedImage);
         
-        onUpdateProfile({
+        const didSave = await onUpdateProfile({
           email,
           name,
           avatar: compressedImage,
+          phone: normalizeIndonesianPhone(phone),
+          address,
         });
-        
-        setToastMessage("Foto profile berhasil diubah!");
-        setShowToast(true);
+
+        if (didSave) {
+          setToastMessage("Foto profile berhasil diubah!");
+          setShowToast(true);
+        }
       } catch (error) {
         setToastMessage("Gagal memproses foto.");
         setShowToast(true);
@@ -72,15 +93,28 @@ export function ProfilePage({ userData, onUpdateProfile, onChangePassword, onDel
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onUpdateProfile({
+
+    const phoneValidation = validateIndonesianPhone(phone);
+    if (!phoneValidation.isValid) {
+      setToastMessage(phoneValidation.message);
+      setShowToast(true);
+      return;
+    }
+
+    const didSave = await onUpdateProfile({
       email,
       name,
       avatar: avatar || undefined,
+      phone: normalizeIndonesianPhone(phone),
+      address: address.trim(),
     });
-    setToastMessage("Perubahan berhasil disimpan!");
-    setShowToast(true);
+
+    if (didSave) {
+      setToastMessage("Perubahan berhasil disimpan!");
+      setShowToast(true);
+    }
   };
 
   const handleChangePasswordSuccess = async (oldPassword: string, newPassword: string) => {
@@ -224,9 +258,12 @@ export function ProfilePage({ userData, onUpdateProfile, onChangePassword, onDel
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     className="pl-10"
-                    placeholder="08xx-xxxx-xxxx"
+                    placeholder="08xxxxxxxxxx"
                   />
                 </div>
+                <p className="text-xs text-gray-500">
+                  Nomor ini akan dipakai sebagai kontak WhatsApp pada laporan barang.
+                </p>
               </div>
 
               {/* Address */}

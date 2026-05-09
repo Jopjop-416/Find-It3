@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { Toast } from "./ui/toast";
 import foundItLogo from "figma:asset/6e20ff767bc819bcb65b83fac10d99d01f0c4fd8.png";
 import ummCampusImage from "../../imports/umm1.png";
 import { supabase } from "../../lib/supabase";
@@ -20,63 +19,68 @@ export function RegisterPage({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showToast, setShowToast] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const trimmedUsername = username.trim();
     const trimmedEmail = email.trim();
+    setMessage("");
 
     if (!trimmedUsername || !trimmedEmail || !password || !confirmPassword) {
-      alert("Semua field wajib diisi.");
+      setMessage("Semua field wajib diisi.");
       return;
     }
 
     if (password !== confirmPassword) {
-      alert("Password tidak cocok!");
+      setMessage("Password tidak cocok.");
       return;
     }
 
     if (!supabase) {
-      alert("Supabase belum dikonfigurasi. Tambahkan environment variables di Vercel terlebih dahulu.");
+      setMessage("Supabase belum dikonfigurasi. Tambahkan environment variables terlebih dahulu.");
       return;
     }
 
-    // Proses registrasi menggunakan Supabase Auth
-    const { error } = await supabase.auth.signUp({
-      email: trimmedEmail,
-      password: password,
-      options: {
-        data: {
-          username: trimmedUsername,
-          name: trimmedUsername,
-          full_name: trimmedUsername,
+    setIsSubmitting(true);
+
+    try {
+      // Proses registrasi menggunakan Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email: trimmedEmail,
+        password: password,
+        options: {
+          data: {
+            username: trimmedUsername,
+            name: trimmedUsername,
+            full_name: trimmedUsername,
+          },
         },
-      },
-    });
+      });
 
-    if (error) {
-      alert("Gagal registrasi: " + error.message);
-      return;
+      if (error) {
+        setMessage(`Gagal registrasi: ${error.message}`);
+        return;
+      }
+
+      if (data.session) {
+        await supabase.auth.signOut();
+      }
+
+      setTimeout(() => {
+        onRegisterSuccess?.();
+      }, 1200);
+    } catch (error) {
+      setMessage("Registrasi gagal karena koneksi atau konfigurasi Supabase bermasalah.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setShowToast(true);
-
-    setTimeout(() => {
-      onRegisterSuccess?.();
-    }, 2000);
   };
 
   return (
-    <>
-      <Toast
-        message="Registrasi berhasil! Silakan login dengan akun Anda"
-        isVisible={showToast}
-        onClose={() => setShowToast(false)}
-      />
-
-      <div className="min-h-screen flex">
+    <div className="min-h-screen flex">
         <div className="hidden lg:flex lg:w-1/2 relative">
           <img
             src={ummCampusImage}
@@ -103,6 +107,12 @@ export function RegisterPage({
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {message && (
+                <div className="rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-900">
+                  {message}
+                </div>
+              )}
+
               <div className="space-y-1.5">
                 <Label
                   htmlFor="username"
@@ -177,9 +187,10 @@ export function RegisterPage({
 
               <Button
                 type="submit"
+                disabled={isSubmitting}
                 className="w-full h-11 bg-black text-white hover:bg-gray-800 rounded-lg font-medium"
               >
-                Sign up
+                {isSubmitting ? "Signing up..." : "Sign up"}
               </Button>
 
               <div className="relative">
@@ -250,7 +261,6 @@ export function RegisterPage({
             </form>
           </div>
         </div>
-      </div>
-    </>
+    </div>
   );
 }

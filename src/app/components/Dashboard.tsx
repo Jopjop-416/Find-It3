@@ -26,6 +26,10 @@ import {
 } from "./ui/dialog";
 import { NewsCarousel } from "./NewsCarousel";
 import { Footer } from "./Footer";
+import {
+  buildWhatsAppUrl,
+  formatIndonesianPhoneDisplay,
+} from "../appState";
 import heroImage from "figma:asset/706763380527f5c21ddaccdcfcc1a4edffb8b3f2.png";
 import laporHilangImg from "figma:asset/2412be6deea607ec6f8ef7e655eb41ff2289957e.png";
 import laporTemuanImg from "figma:asset/6e0302b470dfeaee72f713a6f32bccb12ae8fd58.png";
@@ -359,14 +363,37 @@ export function Dashboard({
                       </div>
                       <div className="flex items-center">
                         <User className="w-4 h-4 mr-2 text-muted-foreground" />
-                        <span>{item.contact}</span>
+                        <span>
+                          {formatIndonesianPhoneDisplay(
+                            item.contact,
+                          )}
+                        </span>
                       </div>
                     </div>
                   </div>
 
-                  {canUpdateStatus && (item.status === "active" ||
-                    item.status === "available") && (
-                    <div className="flex gap-2 pt-4 border-t">
+                  <div className="flex gap-2 pt-4 border-t">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      asChild
+                    >
+                      <a
+                        href={buildWhatsAppUrl(
+                          item.contact,
+                          item.title,
+                        )}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Hubungi Pelapor
+                      </a>
+                    </Button>
+
+                    {canUpdateStatus &&
+                      (item.status === "active" ||
+                        item.status === "available") && (
+                        <>
                       {item.type === "lost" && (
                         <Button
                           onClick={() =>
@@ -387,14 +414,9 @@ export function Dashboard({
                           Tandai Sudah Diambil
                         </Button>
                       )}
-                      <Button
-                        variant="outline"
-                        className="flex-1"
-                      >
-                        Hubungi Pelapor
-                      </Button>
-                    </div>
-                  )}
+                        </>
+                      )}
+                  </div>
                 </div>
               </DialogContent>
             </Dialog>

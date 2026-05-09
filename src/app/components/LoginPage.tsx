@@ -16,35 +16,49 @@ export function LoginPage({ onLoginSuccess, onSwitchToRegister }: LoginPageProps
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!email || !password) return;
+    setMessage("");
+
+    if (!email || !password) {
+      setMessage("Email dan password wajib diisi.");
+      return;
+    }
 
     if (!supabase) {
-      alert("Supabase belum dikonfigurasi. Tambahkan environment variables di Vercel terlebih dahulu.");
+      setMessage("Supabase belum dikonfigurasi. Tambahkan environment variables terlebih dahulu.");
       return;
     }
 
-    // Proses login menggunakan Supabase Auth
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    setIsSubmitting(true);
 
-    if (error) {
-      alert("Email atau password salah. (" + error.message + ")");
-      return;
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      if (error) {
+        setMessage(`Login gagal: ${error.message}`);
+        return;
+      }
+
+      if (rememberMe) {
+        localStorage.setItem("rememberedEmail", email.trim());
+      } else {
+        localStorage.removeItem("rememberedEmail");
+      }
+
+      await onLoginSuccess?.(email.trim());
+    } catch (error) {
+      setMessage("Login gagal karena koneksi atau konfigurasi Supabase bermasalah.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    if (rememberMe) {
-      localStorage.setItem("rememberedEmail", email);
-    } else {
-      localStorage.removeItem("rememberedEmail");
-    }
-
-    await onLoginSuccess?.(email);
   };
 
   return (
@@ -76,6 +90,12 @@ export function LoginPage({ onLoginSuccess, onSwitchToRegister }: LoginPageProps
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
+            {message && (
+              <div className="rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-900">
+                {message}
+              </div>
+            )}
+
             {/* Email Field */}
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium text-gray-700">
@@ -135,9 +155,10 @@ export function LoginPage({ onLoginSuccess, onSwitchToRegister }: LoginPageProps
             {/* Sign In Button */}
             <Button
               type="submit"
+              disabled={isSubmitting}
               className="w-full h-12 bg-black text-white hover:bg-gray-800 rounded-lg font-medium"
             >
-              Sign in
+              {isSubmitting ? "Signing in..." : "Sign in"}
             </Button>
 
             {/* Divider */}

@@ -1,21 +1,91 @@
+# Found-It UMM
 
-  ## Pengujian Aplikasi — Daily Project 6
+Website lost and found untuk lingkungan Universitas Muhammadiyah Malang. Aplikasi ini dibuat dengan React + Vite dan menggunakan Supabase untuk autentikasi, penyimpanan data barang, serta profil pengguna.
 
-  Berikut adalah tabel pengujian aplikasi berdasarkan aspek kualitas yang ditentukan pada desain Daily Project 6. Setiap baris adalah satu kasus uji: deskripsi singkat, langkah pengujian, hasil yang diharapkan, kolom Pass/Fail untuk diisi saat pengujian, dan catatan.
+## Fitur Utama
 
-  | Aspek Kualitas | Kasus Uji | Langkah Pengujian | Hasil yang Diharapkan | Pass / Fail | Catatan |
-  |---|---|---:|---|---:|---|
-  | Fungsionalitas | Register user (form lengkap) | 1) Buka halaman Register. 2) Isi username, email, password, konfirmasi password. 3) Submit. | Registrasi berhasil, muncul toast konfirmasi, data tersimpan di localStorage (key: `registeredUser`). | pass | perlu peningkatan dalam integrasi database |
-  | Fungsionalitas | Register user (form lengkap) | 1) Buka halaman Register. 2) Isi username, email, password, konfirmasi password. 3) Submit. | Registrasi berhasil, muncul toast konfirmasi, data tersimpan di localStorage (key: `registeredUser`). | Pass | Berdasarkan inspeksi kode (`handleSubmit`) dan hasil build/dev yang berjalan — data ditulis ke localStorage. Pengujian UI manual tidak dijalankan otomatis.
-  | Fungsionalitas | Login dengan user terdaftar | 1) Buka halaman Login. 2) Masukkan email & password yang sudah ter-registrasi. 3) Submit. | Login berhasil, diarahkan ke dashboard (atau fungsi callback dipanggil). | Pass | Login memeriksa `registeredUser` di localStorage dan mendukung demo user; alur tersedia dan server berjalan.
-  | Fungsionalitas | Laporkan kehilangan (Report Lost) | 1) Buka form Report Lost. 2) Isi semua field wajib. 3) Submit. | Data tersubmit, tampil notifikasi sukses, entri baru muncul di daftar. | Pass | Form menyimpan draft ke localStorage dan `onSubmit` menambahkan item ke state (dikonfirmasi lewat inspeksi `ReportLostForm` dan `App.addItem`).
-  | Usability (Kemudahan) | Navigasi menu & tautan | 1) Klik logo/menu utama. 2) Akses halaman Profil, Dashboard, Lapor. | Halaman terbuka dengan cepat dan layout responsif. Breadcrumb/heading sesuai. | Pass | Navigasi terdaftar di `App` dan tombol/menu mengubah view state; tampil responsif menurut kelas Tailwind yang digunakan.
-  | Performansi | Waktu muat halaman utama (development) | 1) Jalankan `npm run dev`. 2) Buka http://localhost:5173. 3) Ukur waktu sampai halaman tampil penuh. | Halaman tampil penuh dalam waktu wajar (< 3 s pada mesin dev biasa). Catat hasil pengukuran. | Pass | `vite dev` ready cepat (log ~425 ms) dan `vite build` selesai ~2.9 s pada mesin ini. Pengukuran real-page load gagal sekali via script, namun indikator performa memenuhi ambang.
-  | Keamanan | Input sanitasi form (XSS basic) | 1) Pada field teks, masukkan `<script>alert(1)</script>`. 2) Submit. | Input tidak mengeksekusi script; karakter berbahaya di-escaped atau ditolak. | Fail | Tidak ditemukan sanitasi eksplisit pada input; aplikasi menggunakan React (inner text rendering) sehingga risiko XSS rendah, namun perlu validasi/escape sebelum menyimpan/menampilkan HTML.
-  | Ketersediaan / Reliabilitas | Simulasi offline (form save) | 1) Matikan koneksi jaringan (developer tools: offline). 2) Isi form (mis. report) lalu submit. | Aplikasi menangani kegagalan jaringan (menampilkan pesan/menyimpan local draft). | Pass | `ReportLostForm` menyimpan draft ke `localStorage` dan menampilkan toast saat tidak login — alur offline/draft tersedia.
-  | Kompatibilitas | Tampilan pada mobile (responsive) | 1) Buka halaman di perangkat mobile atau device emulator. 2) Cek form, tombol, carousel. | UI menyesuaikan, elemen tidak terpotong, tombol dapat diklik. | Pass | Layout menggunakan kelas responsif (lg/md) dan komponen menyesuaikan; butuh pengujian manual pada perangkat nyata untuk verifikasi penuh.
-  | Aksesibilitas | Label dan fokus (keyboard) | 1) Tab melalui halaman. 2) Periksa fokus pada input, tombol, dialog. | Fokus terlihat, label tersedia, dialog dapat ditutup via keyboard (Esc). | Pass (partial) | Form menggunakan `Label` dan atribut `htmlFor`; beberapa komponen perlu pengujian keyboard tambahan (modal/dialog focus trap).
-  | Maintainability | Build & lint check | 1) Jalankan `npm run build` dan linter (jika tersedia). 2) Catat kesalahan/warning. | Build sukses tanpa error build; linter memberikan referensi (warning boleh). | Pass | `npm run build` sukses (tanpa error). Tidak ada lint script tersisa di `package.json` (atau belum dijalankan) — linting tidak diuji di sini.
+- Login dan register dengan Supabase Auth
+- Profil pengguna dengan `username`, `email`, `nomor HP`, `alamat`, dan avatar
+- Lapor barang hilang dan barang ditemukan
+- Kontak pelapor langsung ke WhatsApp
+- Status barang dapat diperbarui
+- UI responsif untuk desktop dan mobile
 
+## Tech Stack
 
-  
+- React
+- Vite
+- Tailwind CSS
+- Supabase
+
+## Menjalankan Secara Lokal
+
+1. Install dependency:
+
+```bash
+npm install
+```
+
+2. Buat file `.env` berdasarkan `.env.example`, lalu isi:
+
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+3. Jalankan development server:
+
+```bash
+npm run dev
+```
+
+4. Build production:
+
+```bash
+npm run build
+```
+
+5. Jalankan test:
+
+```bash
+npm test
+```
+
+## Setup Supabase
+
+Project ini mengandalkan beberapa komponen backend di Supabase:
+
+- `Authentication > Users` untuk login dan register
+- tabel `items` untuk data barang
+- tabel `profiles` untuk data profil pengguna
+- edge function `delete-account` untuk hapus akun
+
+Migration tabel `profiles` tersedia di:
+
+[20260509121500_create_profiles_table.sql](</C:/file/Find it/KBT/supabase/migrations/20260509121500_create_profiles_table.sql:1>)
+
+Jika belum dijalankan, buka Supabase SQL Editor lalu jalankan isi migration tersebut.
+
+## Deploy ke Vercel
+
+Tambahkan environment variable berikut di project Vercel:
+
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+Jika fitur hapus akun ingin tetap aktif, deploy juga edge function Supabase:
+
+```bash
+supabase functions deploy delete-account --verify-jwt
+```
+
+Pastikan `SUPABASE_SERVICE_ROLE_KEY` tersedia di environment function Supabase.
+
+## Catatan Sebelum Testing Publik
+
+- Pastikan tabel `profiles` sudah dibuat
+- Pastikan user yang dites ada di `Authentication > Users`
+- Jika email confirmation aktif, user harus verifikasi email sebelum login
+- Pastikan env di Vercel dan lokal mengarah ke project Supabase yang sama

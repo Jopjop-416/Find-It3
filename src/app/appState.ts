@@ -9,6 +9,8 @@ export type UserData = {
   email: string;
   name: string;
   avatar: string;
+  phone: string;
+  address: string;
 };
 
 export type ReportFormData = {
@@ -42,6 +44,8 @@ export function buildUserDataFromAuthUser(user: SupabaseAuthUserLike | null | un
   const metadata = user?.user_metadata ?? {};
   const metadataName = metadata.name ?? metadata.full_name ?? metadata.username;
   const metadataAvatar = metadata.avatar_url ?? metadata.avatar;
+  const metadataPhone = metadata.phone;
+  const metadataAddress = metadata.address;
 
   return {
     email,
@@ -50,7 +54,67 @@ export function buildUserDataFromAuthUser(user: SupabaseAuthUserLike | null | un
         ? metadataName
         : email.split("@")[0] || "User",
     avatar: typeof metadataAvatar === "string" ? metadataAvatar : "",
+    phone: typeof metadataPhone === "string" ? metadataPhone : "",
+    address: typeof metadataAddress === "string" ? metadataAddress : "",
   };
+}
+
+export function normalizeIndonesianPhone(value: string): string {
+  const digits = value.replace(/[^\d+]/g, "");
+
+  if (!digits) {
+    return "";
+  }
+
+  if (digits.startsWith("+62")) {
+    return `62${digits.slice(3)}`;
+  }
+
+  if (digits.startsWith("62")) {
+    return digits;
+  }
+
+  if (digits.startsWith("0")) {
+    return `62${digits.slice(1)}`;
+  }
+
+  return digits;
+}
+
+export function formatIndonesianPhoneDisplay(value: string): string {
+  const normalized = normalizeIndonesianPhone(value);
+
+  if (!normalized.startsWith("62")) {
+    return value;
+  }
+
+  return `0${normalized.slice(2)}`;
+}
+
+export function validateIndonesianPhone(value: string): {
+  isValid: boolean;
+  message: string;
+} {
+  const normalized = normalizeIndonesianPhone(value);
+  const isValid = /^628\d{7,12}$/.test(normalized);
+
+  if (!isValid) {
+    return {
+      isValid: false,
+      message: "Nomor HP harus menggunakan format Indonesia yang valid.",
+    };
+  }
+
+  return {
+    isValid: true,
+    message: "",
+  };
+}
+
+export function buildWhatsAppUrl(phone: string, itemTitle: string): string {
+  const normalized = normalizeIndonesianPhone(phone);
+  const message = `Halo, saya dari website Found-It ingin menghubungi Anda terkait laporan barang "${itemTitle}".`;
+  return `https://wa.me/${normalized}?text=${encodeURIComponent(message)}`;
 }
 
 export async function createPasswordHash(password: string): Promise<string> {
@@ -96,6 +160,11 @@ export function validateReportData(formData: ReportFormData): {
       isValid: false,
       message: "Kategori dan lokasi wajib dipilih.",
     };
+  }
+
+  const phoneValidation = validateIndonesianPhone(formData.contact);
+  if (!phoneValidation.isValid) {
+    return phoneValidation;
   }
 
   return {

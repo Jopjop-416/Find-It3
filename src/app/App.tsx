@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { Search, Plus, Bell, Home, FileText, Camera, Contact, Menu, X, LogIn, User, LogOut } from 'lucide-react';
 import { Button } from './components/ui/button';
 import { Card } from './components/ui/card';
@@ -14,9 +15,11 @@ import { LoginPage } from './components/LoginPage';
 import { RegisterPage } from './components/RegisterPage';
 import { UserAvatar } from './components/UserAvatar';
 import { ProfilePage } from './components/ProfilePage';
+import { Toast } from './components/ui/toast';
 import { ImageWithFallback } from './components/figma/ImageWithFallback';
 import foundItLogo from 'figma:asset/6e20ff767bc819bcb65b83fac10d99d01f0c4fd8.png';
 import {
+  normalizeIndonesianPhone,
   buildUserDataFromAuthUser,
   parseStoredJson,
   type UserData,
@@ -32,7 +35,7 @@ const mockItemsData = [
       type: 'lost',
       location: 'Perpustakaan Pusat',
       date: '2024-09-23',
-      contact: 'ahmad@student.umm.ac.id',
+      contact: '081234567801',
       status: 'active',
       image: 'https://images.unsplash.com/photo-1661353559006-402f30f9e2a1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsb3N0JTIwcGhvbmUlMjB3YWxsZXQlMjBrZXlzfGVufDF8fHx8MTc1ODY5MDA0Nnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral'
     },
@@ -44,7 +47,7 @@ const mockItemsData = [
       type: 'found',
       location: 'Kantin Fakultas Teknik',
       date: '2024-09-22',
-      contact: 'security@umm.ac.id',
+      contact: '081234567802',
       status: 'available',
       image: 'https://images.unsplash.com/photo-1661353559006-402f30f9e2a1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsb3N0JTIwcGhvbmUlMjB3YWxsZXQlMjBrZXlzfGVufDF8fHx8MTc1ODY5MDA0Nnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral'
     },
@@ -56,7 +59,7 @@ const mockItemsData = [
       type: 'lost',
       location: 'Ruang Kelas A203',
       date: '2024-09-21',
-      contact: 'sari@student.umm.ac.id',
+      contact: '081234567803',
       status: 'active',
       image: 'https://images.unsplash.com/photo-1515590573546-cd05dc8557c1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdHVkZW50JTIwYmFja3BhY2slMjBib29rc3xlbnwxfHx8fDE3NTg2OTAwNDl8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral'
     },
@@ -68,7 +71,7 @@ const mockItemsData = [
       type: 'found',
       location: 'Parkiran Gedung B',
       date: '2024-09-20',
-      contact: 'security@umm.ac.id',
+      contact: '081234567804',
       status: 'available',
       image: 'https://images.unsplash.com/photo-1661353559006-402f30f9e2a1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsb3N0JTIwcGhvbmUlMjB3YWxsZXQlMjBrZXlzfGVufDF8fHx8MTc1ODY5MDA0Nnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral'
     },
@@ -80,7 +83,7 @@ const mockItemsData = [
       type: 'lost',
       location: 'Lab Komputer',
       date: '2024-09-18',
-      contact: 'budi@student.umm.ac.id',
+      contact: '081234567805',
       status: 'active',
       image: 'https://images.unsplash.com/photo-1629131726692-1accd0c53ce0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsYXB0b3AlMjBjb21wdXRlciUyMGdyYXklMjBzaWx2ZXJ8ZW58MXx8fHwxNzcyOTc1MDY0fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral'
     },
@@ -92,7 +95,7 @@ const mockItemsData = [
       type: 'found',
       location: 'Taman Kampus',
       date: '2024-09-19',
-      contact: 'security@umm.ac.id',
+      contact: '081234567806',
       status: 'available',
       image: 'https://images.unsplash.com/photo-1760546607676-76c2bd048112?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxibHVlJTIwdHVwcGVyd2FyZSUyMHdhdGVyJTIwYm90dGxlfGVufDF8fHx8MTc3Mjk3NTA2MHww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral'
     },
@@ -104,7 +107,7 @@ const mockItemsData = [
       type: 'lost',
       location: 'Parkiran Motor',
       date: '2024-09-20',
-      contact: 'mahasiswa@student.umm.ac.id',
+      contact: '081234567807',
       status: 'active',
       image: 'https://images.unsplash.com/photo-1680264370818-659352fa16f6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdHVkZW50JTIwaWQlMjBjYXJkJTIwdW5pdmVyc2l0eXxlbnwxfHx8fDE3NzI5NzUwNjF8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral'
     },
@@ -116,7 +119,7 @@ const mockItemsData = [
       type: 'found',
       location: 'Ruang Kelas B102',
       date: '2024-09-22',
-      contact: 'security@umm.ac.id',
+      contact: '081234567808',
       status: 'available',
       image: 'https://images.unsplash.com/photo-1614860243518-c12eb2fdf66c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzb255JTIwYmxhY2slMjBoZWFkc2V0JTIwaGVhZHBob25lc3xlbnwxfHx8fDE3NzI5NzUwNjF8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral'
     },
@@ -177,6 +180,17 @@ const emptyUserData: UserData = {
   email: '',
   name: '',
   avatar: '',
+  phone: '',
+  address: '',
+};
+
+type ProfileRow = {
+  id: string;
+  username: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  avatar_url: string | null;
 };
 
 export default function App() {
@@ -188,9 +202,46 @@ export default function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState<UserData>(emptyUserData);
+  const [authToastMessage, setAuthToastMessage] = useState('');
+  const [showAuthToast, setShowAuthToast] = useState(false);
 
   const alertMissingSupabaseConfig = () => {
     alert('Supabase belum dikonfigurasi. Tambahkan VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY di environment variables Vercel.');
+  };
+
+  const buildMergedUserData = (
+    authUser: SupabaseUser,
+    profile?: ProfileRow | null,
+  ): UserData => {
+    const authUserData = buildUserDataFromAuthUser(authUser);
+
+    return {
+      ...authUserData,
+      email: profile?.email?.trim() || authUser.email || authUserData.email,
+      name: profile?.username?.trim() || authUserData.name,
+      avatar: profile?.avatar_url?.trim() || authUserData.avatar,
+      phone: profile?.phone?.trim() || authUserData.phone,
+      address: profile?.address?.trim() || authUserData.address,
+    };
+  };
+
+  const fetchProfileRow = async (userId: string): Promise<ProfileRow | null> => {
+    if (!supabase) {
+      return null;
+    }
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, username, email, phone, address, avatar_url')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (error) {
+      console.warn('Error fetching profile row:', error.message);
+      return null;
+    }
+
+    return data;
   };
 
   // Mirror Supabase Auth into React state. Do not trust localStorage for auth.
@@ -207,15 +258,36 @@ export default function App() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!isMounted) return;
 
-      setIsLoggedIn(Boolean(session?.user));
-      setUserData(session?.user ? buildUserDataFromAuthUser(session.user) : emptyUserData);
+      if (!session?.user) {
+        setIsLoggedIn(false);
+        setUserData(emptyUserData);
+        return;
+      }
+
+      setIsLoggedIn(true);
+      setUserData(buildMergedUserData(session.user));
+
+      const profile = await fetchProfileRow(session.user.id);
+      if (!isMounted) return;
+      setUserData(buildMergedUserData(session.user, profile));
     };
 
     syncSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsLoggedIn(Boolean(session?.user));
-      setUserData(session?.user ? buildUserDataFromAuthUser(session.user) : emptyUserData);
+      if (!session?.user) {
+        setIsLoggedIn(false);
+        setUserData(emptyUserData);
+        return;
+      }
+
+      setIsLoggedIn(true);
+      setUserData(buildMergedUserData(session.user));
+
+      fetchProfileRow(session.user.id).then((profile) => {
+        if (!isMounted) return;
+        setUserData(buildMergedUserData(session.user, profile));
+      });
     });
 
     return () => {
@@ -351,13 +423,23 @@ export default function App() {
     setCurrentView('dashboard');
   };
 
-  const handleUpdateProfile = async (data: { email: string; name: string; avatar?: string }) => {
+  const handleUpdateProfile = async (data: { email: string; name: string; avatar?: string; phone: string; address: string }): Promise<boolean> => {
     if (!supabase) {
       alertMissingSupabaseConfig();
-      return;
+      return false;
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      alert('Sesi login Anda tidak ditemukan. Silakan login ulang.');
+      return false;
     }
 
     const trimmedEmail = data.email.trim();
+    const trimmedName = data.name.trim();
+    const normalizedPhone = normalizeIndonesianPhone(data.phone);
+    const trimmedAddress = data.address.trim();
     const updatePayload: {
       email?: string;
       data: {
@@ -365,13 +447,17 @@ export default function App() {
         full_name: string;
         username: string;
         avatar_url?: string;
+        phone: string;
+        address: string;
       };
     } = {
       data: {
-        name: data.name, 
-        full_name: data.name,
-        username: data.name,
-        avatar_url: data.avatar 
+        name: trimmedName,
+        full_name: trimmedName,
+        username: trimmedName,
+        avatar_url: data.avatar,
+        phone: normalizedPhone,
+        address: trimmedAddress,
       }
     };
 
@@ -383,16 +469,31 @@ export default function App() {
 
     if (error) {
       alert("Gagal memperbarui profile: " + error.message);
-      return;
+      return false;
     }
 
-    const updatedData = authData.user
-      ? buildUserDataFromAuthUser(authData.user)
-      : {
-          ...userData,
-          name: data.name,
-          avatar: data.avatar || userData.avatar,
-        };
+    const profilePayload = {
+      id: user.id,
+      username: trimmedName,
+      email: trimmedEmail || user.email || '',
+      phone: normalizedPhone,
+      address: trimmedAddress,
+      avatar_url: data.avatar || '',
+    };
+
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .upsert(profilePayload, { onConflict: 'id' })
+      .select('id, username, email, phone, address, avatar_url')
+      .maybeSingle();
+
+    if (profileError) {
+      alert('Profil Auth sudah diperbarui, tetapi penyimpanan tabel profiles gagal: ' + profileError.message);
+      return false;
+    }
+
+    const updatedUser = authData.user ?? user;
+    const updatedData = buildMergedUserData(updatedUser, profileData);
 
     setUserData(updatedData);
 
@@ -410,6 +511,8 @@ export default function App() {
       userEmail: updatedData.email
     };
     setNotifications((currentNotifications) => [notification, ...currentNotifications]);
+
+    return true;
   };
 
   const handleChangePassword = async (oldPassword: string, newPassword: string): Promise<boolean> => {
@@ -515,6 +618,12 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Toast
+        message={authToastMessage}
+        isVisible={showAuthToast}
+        onClose={() => setShowAuthToast(false)}
+      />
+
       {/* Header - Hidden on login and register pages */}
       {currentView !== 'login' && currentView !== 'register' && (
       <header className="bg-white border-b border-border sticky top-0 z-50">
@@ -705,6 +814,11 @@ export default function App() {
               setCurrentView('login');
             }}
             isLoggedIn={isLoggedIn}
+            userPhone={userData.phone}
+            onRequireProfileCompletion={() => {
+              alert('Lengkapi nomor HP Indonesia di halaman profil terlebih dahulu.');
+              setCurrentView('profile');
+            }}
           />
         )}
 
@@ -716,6 +830,11 @@ export default function App() {
               setCurrentView('login');
             }}
             isLoggedIn={isLoggedIn}
+            userPhone={userData.phone}
+            onRequireProfileCompletion={() => {
+              alert('Lengkapi nomor HP Indonesia di halaman profil terlebih dahulu.');
+              setCurrentView('profile');
+            }}
           />
         )}
 
@@ -753,12 +872,20 @@ export default function App() {
               const userName = user?.user_metadata?.name || user?.user_metadata?.username || email?.split('@')[0] || 'User';
               const userAvatar = user?.user_metadata?.avatar_url || '';
 
+              setAuthToastMessage('Login berhasil!');
+              setShowAuthToast(true);
               setIsLoggedIn(true);
-              setUserData({
-                email: email || user?.email || '',
-                name: userName,
-                avatar: userAvatar,
-              });
+              if (user) {
+                setUserData(buildMergedUserData(user));
+              } else {
+                setUserData({
+                  email: email || '',
+                  name: userName,
+                  avatar: userAvatar,
+                  phone: '',
+                  address: '',
+                });
+              }
 
               // Check if there's a redirect after login
               const redirectTo = localStorage.getItem('redirectAfterLogin');
@@ -768,6 +895,12 @@ export default function App() {
               } else {
                 setCurrentView('dashboard');
               }
+
+              if (user) {
+                void fetchProfileRow(user.id).then((profile) => {
+                  setUserData(buildMergedUserData(user, profile));
+                });
+              }
             }}
             onSwitchToRegister={() => setCurrentView('register')}
           />
@@ -776,6 +909,8 @@ export default function App() {
         {currentView === 'register' && (
           <RegisterPage
             onRegisterSuccess={() => {
+              setAuthToastMessage('Registrasi berhasil! Silakan login dengan akun Anda');
+              setShowAuthToast(true);
               // After register, go to login page
               setCurrentView('login');
             }}

@@ -8,15 +8,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Toast } from './ui/toast';
 import { AlertTriangle, Upload, X } from 'lucide-react';
 import { Alert, AlertDescription } from './ui/alert';
-import { parseStoredJson, validateReportData, compressImage, validateImageFile } from '../appState';
+import {
+  compressImage,
+  formatIndonesianPhoneDisplay,
+  normalizeIndonesianPhone,
+  parseStoredJson,
+  validateImageFile,
+  validateReportData,
+} from '../appState';
 
 interface ReportLostFormProps {
   onSubmit: (item: any) => void;
   onRequireLogin: () => void;
+  onRequireProfileCompletion: () => void;
   isLoggedIn: boolean;
+  userPhone: string;
 }
 
-export function ReportLostForm({ onSubmit, onRequireLogin, isLoggedIn }: ReportLostFormProps) {
+export function ReportLostForm({
+  onSubmit,
+  onRequireLogin,
+  onRequireProfileCompletion,
+  isLoggedIn,
+  userPhone,
+}: ReportLostFormProps) {
   const [formData, setFormData] = useState(() => {
     return parseStoredJson(localStorage.getItem('reportLostDraft'), {
       title: '',
@@ -76,7 +91,12 @@ export function ReportLostForm({ onSubmit, onRequireLogin, isLoggedIn }: ReportL
     e.preventDefault();
     setValidationError('');
 
-    const validation = validateReportData(formData);
+    const normalizedUserPhone = normalizeIndonesianPhone(userPhone);
+
+    const validation = validateReportData({
+      ...formData,
+      contact: normalizedUserPhone,
+    });
     if (!validation.isValid) {
       setValidationError(validation.message);
       return;
@@ -95,6 +115,14 @@ export function ReportLostForm({ onSubmit, onRequireLogin, isLoggedIn }: ReportL
       return;
     }
 
+    if (!userPhone) {
+      setValidationError('Lengkapi nomor HP Indonesia di halaman profil sebelum mengirim laporan.');
+      setTimeout(() => {
+        onRequireProfileCompletion();
+      }, 1200);
+      return;
+    }
+
     setIsSubmitting(true);
 
     // Simulate API call
@@ -103,6 +131,7 @@ export function ReportLostForm({ onSubmit, onRequireLogin, isLoggedIn }: ReportL
     onSubmit({
       ...formData,
       type: 'lost',
+      contact: normalizedUserPhone,
       image: imagePreview || 'https://images.unsplash.com/photo-1661353559006-402f30f9e2a1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsb3N0JTIwcGhvbmUlMjB3YWxsZXQlMjBrZXlzfGVufDF8fHx8MTc1ODY5MDA0Nnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral'
     });
 
@@ -240,15 +269,18 @@ export function ReportLostForm({ onSubmit, onRequireLogin, isLoggedIn }: ReportL
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="contact">Kontak yang Dapat Dihubungi *</Label>
+              <Label htmlFor="contact">Nomor WhatsApp Pelapor *</Label>
               <Input
                 id="contact"
-                type="email"
-                value={formData.contact}
-                onChange={(e) => setFormData(prev => ({ ...prev, contact: e.target.value }))}
-                placeholder="Email"
-                required
+                type="tel"
+                value={formatIndonesianPhoneDisplay(userPhone)}
+                readOnly
+                placeholder="Lengkapi nomor HP di profil"
+                className="bg-muted"
               />
+              <p className="text-xs text-muted-foreground">
+                Nomor diambil dari profil Anda dan akan dipakai untuk chat WhatsApp.
+              </p>
             </div>
 
             <div className="space-y-2">

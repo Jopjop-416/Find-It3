@@ -61,7 +61,7 @@ export function Toast({ message, isVisible, onClose }: ToastProps) {
 
   return (
     <div
-      className={`fixed top-8 right-6 sm:top-10 sm:right-8 z-50 transition-all duration-300 ease-out ${
+      className={`fixed top-20 right-4 sm:top-18 sm:right-8 z-50 transition-all duration-300 ease-out ${
         isLeaving
           ? "translate-x-6 translate-y-2 opacity-0 scale-95"
           : isEntering

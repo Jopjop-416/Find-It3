@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   buildUserDataFromAuthUser,
+  buildWhatsAppUrl,
   createPasswordHash,
+  formatIndonesianPhoneDisplay,
   isPasswordMatch,
+  normalizeIndonesianPhone,
   parseStoredJson,
   validateImageFile,
+  validateIndonesianPhone,
   validateReportData,
 } from "./appState";
 
@@ -48,12 +52,16 @@ describe("app state helpers", () => {
         user_metadata: {
           name: "Rani Permata",
           avatar_url: "data:image/jpeg;base64,abc",
+          phone: "08123456789",
+          address: "Jl. Tlogomas No. 246, Malang",
         },
       }),
     ).toEqual({
       email: "rani@student.umm.ac.id",
       name: "Rani Permata",
       avatar: "data:image/jpeg;base64,abc",
+      phone: "08123456789",
+      address: "Jl. Tlogomas No. 246, Malang",
     });
   });
 
@@ -66,6 +74,8 @@ describe("app state helpers", () => {
     ).toMatchObject({
       email: "budi@student.umm.ac.id",
       name: "budi",
+      phone: "",
+      address: "",
     });
   });
 
@@ -84,5 +94,29 @@ describe("app state helpers", () => {
       isValid: true,
       message: "",
     });
+  });
+
+  it("normalizes Indonesian phone numbers for storage and WhatsApp", () => {
+    expect(normalizeIndonesianPhone("0812-3456-789")).toBe("628123456789");
+    expect(normalizeIndonesianPhone("+62 812 3456 789")).toBe("628123456789");
+    expect(formatIndonesianPhoneDisplay("628123456789")).toBe("08123456789");
+  });
+
+  it("validates Indonesian phone numbers", () => {
+    expect(validateIndonesianPhone("08123456789")).toEqual({
+      isValid: true,
+      message: "",
+    });
+
+    expect(validateIndonesianPhone("071234")).toEqual({
+      isValid: false,
+      message: "Nomor HP harus menggunakan format Indonesia yang valid.",
+    });
+  });
+
+  it("builds a WhatsApp URL from a reporter phone number", () => {
+    expect(buildWhatsAppUrl("08123456789", "Buku Bahasa Indonesia")).toBe(
+      "https://wa.me/628123456789?text=Halo%2C%20saya%20dari%20website%20Found-It%20ingin%20menghubungi%20Anda%20terkait%20laporan%20barang%20%22Buku%20Bahasa%20Indonesia%22.",
+    );
   });
 });
