@@ -234,13 +234,13 @@ export function ProfilePage({ userData, onUpdateProfile, onChangePassword, onDel
                 <Label htmlFor="address" className="text-sm font-medium text-gray-700">
                   Alamat
                 </Label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                <div className="relative rounded-lg border border-gray-300 transition-colors focus-within:border-orange-500">
+                  <MapPin className="pointer-events-none absolute left-3 top-3 w-4 h-4 text-gray-400" />
                   <textarea
                     id="address"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent min-h-[80px] resize-none"
+                    className="min-h-[80px] w-full resize-none rounded-lg border-0 bg-transparent py-2 pl-10 pr-4 outline-none focus:outline-none focus:ring-0"
                     placeholder="Masukkan alamat lengkap"
                   />
                 </div>
