@@ -201,12 +201,12 @@ export function Dashboard({
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-[repeat(5,minmax(0,1fr))] gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-[repeat(5,minmax(0,1fr))] gap-3">
           {items.map((item) => (
             <Dialog key={item.id}>
               <DialogTrigger className="text-left w-full h-full">
                 <Card className="h-full cursor-pointer overflow-hidden transition-all duration-500 ease-in-out hover:-translate-y-1 flex flex-col">
-                  <div className="relative h-48 shrink-0">
+                  <div className="relative h-32 shrink-0 sm:h-48">
                     <ImageWithFallback
                       src={item.image}
                       alt={item.title}
@@ -219,7 +219,7 @@ export function Dashboard({
                           ? "destructive"
                           : "default"
                       }
-                      className="absolute top-3 left-3 font-medium text-[10px] px-2 py-0.5"
+                      className="absolute top-2 left-2 font-medium text-[10px] px-1.5 py-0.5 sm:top-3 sm:left-3 sm:px-2"
                     >
                       {item.type === "lost"
                         ? "Hilang"
@@ -228,7 +228,7 @@ export function Dashboard({
                     {/* Category Badge - Top Right */}
                     <Badge
                       variant="secondary"
-                      className="absolute top-3 right-3 max-w-[45%] bg-white/90 text-gray-800 hover:bg-white text-[10px] px-2 py-0.5"
+                      className="absolute top-2 right-2 max-w-[48%] bg-white/90 text-gray-800 hover:bg-white text-[10px] px-1.5 py-0.5 sm:top-3 sm:right-3 sm:max-w-[45%] sm:px-2"
                     >
                       <span className="line-clamp-1 break-all">
                         {item.category}
@@ -236,23 +236,23 @@ export function Dashboard({
                     </Badge>
                   </div>
 
-                  <CardContent className="p-4 pt-1 flex flex-1 flex-col">
-                    <h3 className="font-semibold mb-2 text-base line-clamp-1">
+                  <CardContent className="flex flex-1 flex-col p-3 pt-2 sm:p-4 sm:pt-1">
+                    <h3 className="mb-1.5 line-clamp-1 text-sm font-semibold sm:mb-2 sm:text-base">
                       {item.title}
                     </h3>
-                    <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
+                    <p className="mb-2 line-clamp-2 text-[11px] text-muted-foreground sm:mb-3 sm:text-xs">
                       {item.description}
                     </p>
 
-                    <div className="space-y-1.5 mb-3">
-                      <div className="flex items-center min-w-0 text-xs text-muted-foreground">
-                        <MapPin className="w-3.5 h-3.5 mr-1.5 shrink-0 text-orange-500" />
+                    <div className="mb-2.5 space-y-1.5 sm:mb-3">
+                      <div className="flex min-w-0 items-center text-[11px] text-muted-foreground sm:text-xs">
+                        <MapPin className="mr-1 h-3 w-3 shrink-0 text-orange-500 sm:mr-1.5 sm:h-3.5 sm:w-3.5" />
                         <span className="line-clamp-1">
                           {item.location}
                         </span>
                       </div>
-                      <div className="flex items-center text-xs text-muted-foreground">
-                        <Calendar className="w-3.5 h-3.5 mr-1.5 shrink-0 text-orange-500" />
+                      <div className="flex items-center text-[11px] text-muted-foreground sm:text-xs">
+                        <Calendar className="mr-1 h-3 w-3 shrink-0 text-orange-500 sm:mr-1.5 sm:h-3.5 sm:w-3.5" />
                         {new Date(
                           item.date,
                         ).toLocaleDateString("id-ID", {
@@ -271,7 +271,7 @@ export function Dashboard({
                           ? "outline"
                           : "secondary"
                       }
-                      className="mt-auto w-fit text-xs"
+                      className="mt-auto w-fit text-[11px] sm:text-xs"
                     >
                       {item.status === "active" &&
                         "Masih Dicari"}

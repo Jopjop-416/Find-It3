@@ -130,11 +130,13 @@ export function NotificationCenter({ notifications, onMarkAsRead, onDeleteNotifi
           {unreadNotifications.map((notification) => (
             <Card key={notification.id} className="border-l-4 border-green-600">
               <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-3 flex-1">
-                    {getNotificationIcon(notification.type)}
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center space-x-2">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                    <div className="shrink-0 pt-0.5">
+                      {getNotificationIcon(notification.type)}
+                    </div>
+                    <div className="flex-1 space-y-2 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Badge variant={getNotificationBadgeVariant(notification.type)}>
                           {getNotificationLabel(notification.type)}
                         </Badge>
@@ -142,14 +144,15 @@ export function NotificationCenter({ notifications, onMarkAsRead, onDeleteNotifi
                           {new Date(notification.date).toLocaleDateString('id-ID')}
                         </span>
                       </div>
-                      <p className="text-sm">{notification.message}</p>
+                      <p className="text-sm leading-6 break-words">{notification.message}</p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => onMarkAsRead(notification.id)}
+                      className="w-full sm:w-auto"
                     >
                       Tandai Dibaca
                     </Button>
@@ -157,7 +160,7 @@ export function NotificationCenter({ notifications, onMarkAsRead, onDeleteNotifi
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDelete(notification.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className="self-end text-red-600 hover:text-red-700 hover:bg-red-50 sm:self-auto"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -176,11 +179,13 @@ export function NotificationCenter({ notifications, onMarkAsRead, onDeleteNotifi
           {readNotifications.map((notification) => (
             <Card key={notification.id} className="opacity-75">
               <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-3 flex-1">
-                    {getNotificationIcon(notification.type)}
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center space-x-2">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                    <div className="shrink-0 pt-0.5">
+                      {getNotificationIcon(notification.type)}
+                    </div>
+                    <div className="flex-1 space-y-2 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Badge variant="outline">
                           {getNotificationLabel(notification.type)}
                         </Badge>
@@ -191,14 +196,16 @@ export function NotificationCenter({ notifications, onMarkAsRead, onDeleteNotifi
                           Sudah dibaca
                         </Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground">{notification.message}</p>
+                      <p className="text-sm text-muted-foreground leading-6 break-words">
+                        {notification.message}
+                      </p>
                     </div>
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDelete(notification.id)}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    className="self-end text-red-600 hover:text-red-700 hover:bg-red-50 sm:self-auto"
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
