@@ -234,7 +234,7 @@ export function ContactInfo() {
             Kontak Darurat
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent> 
           <div className="space-y-3">
             <p className="text-sm text-red-700">
               Untuk kehilangan dokumen penting atau situasi
