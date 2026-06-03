@@ -17,6 +17,7 @@ import {
   Users,
   HelpCircle,
 } from "lucide-react";
+import merahBg from "../../assets/merah.png";
 
 export function ContactInfo() {
   const campusMapEmbedUrl =
@@ -117,23 +118,40 @@ export function ContactInfo() {
             <Card
               key={index}
               className={
-                action.urgent ? "border-red-200 bg-red-50" : ""
+                action.urgent
+                  ? "relative overflow-hidden border-red-200"
+                  : ""
               }
             >
-              <CardContent className="p-4">
+              {action.urgent && (
+                <>
+                  <img
+                    src={merahBg}
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/25" />
+                </>
+              )}
+              <CardContent
+                className={`relative z-10 p-4 ${action.urgent ? "text-white" : ""}`}
+              >
                 <div className="flex items-start space-x-3">
                   <div
-                    className={`p-2 rounded-lg ${action.urgent ? "bg-red-100" : "bg-blue-100"}`}
+                    className={`p-2 rounded-lg ${action.urgent ? "bg-white/15 backdrop-blur-sm" : "bg-blue-100"}`}
                   >
                     <Icon
-                      className={`w-5 h-5 ${action.urgent ? "text-red-600" : "text-blue-600"}`}
+                      className={`w-5 h-5 ${action.urgent ? "text-white" : "text-blue-600"}`}
                     />
                   </div>
                   <div className="flex-1">
                     <h3 className="font-semibold mb-1">
                       {action.title}
                     </h3>
-                    <p className="text-sm text-muted-foreground mb-3">
+                    <p
+                      className={`text-sm mb-3 ${action.urgent ? "text-white/90" : "text-muted-foreground"}`}
+                    >
                       {action.description}
                     </p>
                     <Button
@@ -143,7 +161,11 @@ export function ContactInfo() {
                           ? "destructive"
                           : "default"
                       }
-                      className="w-full"
+                      className={
+                        action.urgent
+                          ? "w-full bg-red-700 text-white hover:bg-black hover:text-white text-xs"
+                          : "w-full"
+                      }
                     >
                       {action.action}
                     </Button>
@@ -227,23 +249,32 @@ export function ContactInfo() {
       </div>
 
       {/* Emergency Contact */}
-      <Card className="border-red-200 bg-red-50">
+      <Card className="relative overflow-hidden border-red-200 rounded-sm">
+        <img
+          src={merahBg}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-black/25" />
         <CardHeader>
-          <CardTitle className="text-red-800 flex items-center">
-            <Shield className="w-5 h-5 mr-2" />
+          <CardTitle className="relative z-10 flex items-center text-white">
+            <span className="mr-2 rounded-sm bg-white/15 p-2 backdrop-blur-sm">
+              <Shield className="w-5 h-5" />
+            </span>
             Kontak Darurat
           </CardTitle>
         </CardHeader>
-        <CardContent> 
+        <CardContent className="relative z-10"> 
           <div className="space-y-3">
-            <p className="text-sm text-red-700">
+            <p className="text-sm text-white/90">
               Untuk kehilangan dokumen penting atau situasi
               mendesak:
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div className="flex items-center space-x-2">
-                <Phone className="w-4 h-4 text-red-600" />
-                <span className="font-semibold">
+                <Phone className="w-4 h-4 text-white" />
+                <span className="font-semibold text-white">
                   Security UMM 24/7: +62341464318
                 </span>
               </div>
@@ -251,8 +282,11 @@ export function ContactInfo() {
               
               </div>
             </div>
-            <Button variant="destructive" size="sm">
-              <Phone className="w-4 h-4 mr-2" />
+            <Button
+              variant="destructive"
+              size="sm"
+              className="rounded-sm bg-red-700 text-white text-xs hover:bg-black hover:text-white"
+            >
               Hubungi Sekarang
             </Button>
           </div>

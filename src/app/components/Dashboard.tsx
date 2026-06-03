@@ -33,6 +33,7 @@ import {
 import heroImage from "figma:asset/706763380527f5c21ddaccdcfcc1a4edffb8b3f2.png";
 import laporHilangImg from "figma:asset/2412be6deea607ec6f8ef7e655eb41ff2289957e.png";
 import laporTemuanImg from "figma:asset/6e0302b470dfeaee72f713a6f32bccb12ae8fd58.png";
+import merahBg from "../../assets/merah.png";
 
 interface DashboardProps {
   items: any[];
@@ -57,7 +58,7 @@ export function Dashboard({
   return (
     <div className="space-y-8">
       {/* Hero Section */}
-      <div className="grid md:grid-cols-2 gap-0 rounded-lg overflow-hidden min-h-[400px] md:min-h-[500px]">
+      <div className="grid md:grid-cols-2 gap-0 rounded-sm overflow-hidden min-h-[400px] md:min-h-[500px]">
         {/* Left Side - Text Content */}
         <div className="bg-black text-white p-8 md:p-12 flex flex-col justify-center">
           <h1 className="text-4xl font-bold mb-4">
@@ -108,7 +109,7 @@ export function Dashboard({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Lapor Hilang Card */}
           <Card
-            className="overflow-hidden relative h-80 rounded-md cursor-pointer group"
+            className="overflow-hidden relative h-80 rounded-sm cursor-pointer group"
             onClick={() => onNavigate?.("report-lost")}
           >
             <img
@@ -136,7 +137,7 @@ export function Dashboard({
 
           {/* Lapor Temuan Card */}
           <Card
-            className="overflow-hidden relative h-80 rounded-md cursor-pointer group"
+            className="overflow-hidden relative h-80 rounded-sm cursor-pointer group"
             onClick={() => onNavigate?.("report-found")}
           >
             <img
@@ -163,17 +164,24 @@ export function Dashboard({
           </Card>
 
           {/* Kontak Card */}
-          <Card className="overflow-hidden h-80 rounded-md border-red-200 bg-red-50">
-            <CardContent className="p-6 h-full flex flex-col justify-between">
+          <Card className="overflow-hidden relative h-80 rounded-sm border-red-200">
+            <img
+              src={merahBg}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-black/25" />
+            <CardContent className="relative z-10 p-6 h-full flex flex-col justify-between">
               <div className="flex items-start space-x-3">
-                <div className="p-2 rounded-lg bg-red-100 ">
-                  <Phone className="w-5 h-5 text-red-600" />
+                <div className="p-2 rounded-sm bg-white/15 backdrop-blur-sm">
+                  <Phone className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-red-800 font-semibold mb-1">
+                  <h3 className="text-white font-semibold mb-1">
                     Lapor Kehilangan Darurat
                   </h3>
-                  <p className="text-red-700 text-xs">
+                  <p className="text-white/90 text-xs">
                     Untuk barang penting seperti KTM, SIM, atau
                     dokumen
                   </p>
@@ -181,7 +189,7 @@ export function Dashboard({
               </div>
               <Button
                 onClick={() => onNavigate?.("contact")}
-                className="hover:bg-red-700 text-xs px-3 py-1.5 h-auto rounded-sm w-full"
+                className="bg-red-700 hover:bg-black hover:text-white  text-xs px-3 py-2 h-auto rounded-sm w-full text-white"
                 variant="destructive"
               >
                 Hubungi Security
@@ -209,7 +217,7 @@ export function Dashboard({
           {items.map((item) => (
             <Dialog key={item.id}>
               <DialogTrigger className="text-left w-full h-full">
-                <Card className="h-full cursor-pointer overflow-hidden transition-all duration-500 ease-in-out hover:-translate-y-1 flex flex-col">
+                <Card className="h-full cursor-pointer overflow-hidden rounded-sm transition-all duration-500 ease-in-out hover:-translate-y-1 flex flex-col">
                   <div className="relative h-32 shrink-0 sm:h-48">
                     <ImageWithFallback
                       src={item.image}
@@ -223,7 +231,7 @@ export function Dashboard({
                           ? "destructive"
                           : "default"
                       }
-                      className="absolute top-2 left-2 font-medium text-[10px] px-1.5 py-0.5 sm:top-3 sm:left-3 sm:px-2"
+                      className="absolute top-2 left-2 rounded-sm font-medium text-[10px] px-1.5 py-0.5 sm:top-3 sm:left-3 sm:px-2"
                     >
                       {item.type === "lost"
                         ? "Hilang"
@@ -232,7 +240,7 @@ export function Dashboard({
                     {/* Category Badge - Top Right */}
                     <Badge
                       variant="secondary"
-                      className="absolute top-2 right-2 max-w-[48%] bg-white/90 text-gray-800 hover:bg-white text-[10px] px-1.5 py-0.5 sm:top-3 sm:right-3 sm:max-w-[45%] sm:px-2"
+                      className="absolute top-2 right-2 max-w-[48%] rounded-[2px] bg-white/90 text-gray-800 hover:bg-white text-[10px] px-1.5 py-0.5 sm:top-3 sm:right-3 sm:max-w-[45%] sm:px-2"
                     >
                       <span className="line-clamp-1 break-all">
                         {item.category}
@@ -275,7 +283,7 @@ export function Dashboard({
                           ? "outline"
                           : "secondary"
                       }
-                      className="mt-auto w-fit text-[11px] sm:text-xs"
+                      className="mt-auto w-fit rounded-sm text-[11px] sm:text-xs"
                     >
                       {item.status === "active" &&
                         "Masih Dicari"}
@@ -307,7 +315,7 @@ export function Dashboard({
                     <ImageWithFallback
                       src={item.image}
                       alt={item.title}
-                      className="w-full h-full object-cover rounded-lg"
+                      className="w-full h-full object-cover rounded-sm"
                     />
                   </div>
 
@@ -318,15 +326,22 @@ export function Dashboard({
                           ? "destructive"
                           : "default"
                       }
+                      className="rounded-sm"
                     >
                       {item.type === "lost"
                         ? "Barang Hilang"
                         : "Barang Ditemukan"}
                     </Badge>
-                    <Badge variant="secondary">
+                    <Badge
+                      variant="secondary"
+                      className="rounded-[2px]"
+                    >
                       {item.category}
                     </Badge>
-                    <Badge variant="outline">
+                    <Badge
+                      variant="outline"
+                      className="rounded-sm"
+                    >
                       {item.status === "active" &&
                         "Masih Dicari"}
                       {item.status === "available" &&
