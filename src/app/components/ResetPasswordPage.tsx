@@ -72,69 +72,69 @@ export function ResetPasswordPage({ onSuccess }: ResetPasswordPageProps) {
         variant={toastVariant}
       />
       <div className="min-h-screen flex">
-      <div className="hidden lg:flex lg:w-1/2 relative">
-        <img
-          src={ummCampusImage}
-          alt="UMM Campus"
-          className="w-full h-full object-cover"
-        />
-      </div>
-
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
-        <div className="w-full max-w-md space-y-8">
-          <div className="flex flex-col items-start">
-            <img
-              src={foundItLogo}
-              alt="Lost & Found UMM"
-              className="h-5 w-auto object-contain mb-4"
-            />
-            <h1 className="text-2xl font-bold text-gray-900">Ganti Password</h1>
-            <p className="mt-2 text-sm text-gray-600">
-              Masukkan password baru Anda untuk menyelesaikan proses reset.
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="new-password" className="text-sm font-medium text-gray-700">
-                Password Baru
-              </Label>
-              <Input
-                id="new-password"
-                type="password"
-                placeholder="Masukkan password baru"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                required
-                className="w-full h-12 rounded-sm border border-gray-300 bg-white px-4 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirm-new-password" className="text-sm font-medium text-gray-700">
-                Konfirmasi Password Baru
-              </Label>
-              <Input
-                id="confirm-new-password"
-                type="password"
-                placeholder="Ulangi password baru"
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                required
-                className="w-full h-12 rounded-sm border border-gray-300 bg-white px-4 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              />
-            </div>
-
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full h-12 rounded-sm bg-black text-white hover:bg-gray-800 font-medium"
-            >
-              {isSubmitting ? "Menyimpan..." : "Simpan Password Baru"}
-            </Button>
-          </form>
+        <div className="hidden lg:flex lg:w-1/2 relative">
+          <img
+            src={ummCampusImage}
+            alt="UMM Campus"
+            className="w-full h-full object-cover"
+          />
         </div>
-      </div>
+
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
+          <div className="w-full max-w-md space-y-8">
+            <div className="flex flex-col items-start">
+              <img
+                src={foundItLogo}
+                alt="Lost & Found UMM"
+                className="h-5 w-auto object-contain mb-4"
+              />
+              <h1 className="text-2xl font-bold text-gray-900">Ganti Password</h1>
+              <p className="mt-2 text-sm text-gray-600">
+                Masukkan password baru Anda untuk menyelesaikan proses reset.
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="new-password" className="text-sm font-medium text-gray-700">
+                  Password Baru
+                </Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  placeholder="Masukkan password baru"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                  className="w-full h-12 rounded-sm border border-gray-300 bg-white px-4 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirm-new-password" className="text-sm font-medium text-gray-700">
+                  Konfirmasi Password Baru
+                </Label>
+                <Input
+                  id="confirm-new-password"
+                  type="password"
+                  placeholder="Ulangi password baru"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  required
+                  className="w-full h-12 rounded-sm border border-gray-300 bg-white px-4 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full h-12 rounded-sm bg-black text-white hover:bg-gray-800 font-medium"
+              >
+                {isSubmitting ? "Menyimpan..." : "Simpan Password Baru"}
+              </Button>
+            </form>
+          </div>
+        </div>
       </div>
     </>
   );
