@@ -22,8 +22,9 @@ interface ProfilePageProps {
     avatar?: string;
     phone: string;
     address: string;
+    nim: string;
   };
-  onUpdateProfile: (data: { email: string; name: string; avatar?: string; phone: string; address: string }) => Promise<boolean>;
+  onUpdateProfile: (data: { email: string; name: string; avatar?: string; phone: string; address: string; nim: string }) => Promise<boolean>;
   onChangePassword: (oldPassword: string, newPassword: string) => boolean | Promise<boolean>;
   onDeleteAccount: (confirmation: string, email: string) => boolean | Promise<boolean>;
   onBrowseOwnReports: () => void;
@@ -34,6 +35,7 @@ export function ProfilePage({ userData, onUpdateProfile, onChangePassword, onDel
   const [email, setEmail] = useState(userData.email);
   const [phone, setPhone] = useState(formatIndonesianPhoneDisplay(userData.phone));
   const [address, setAddress] = useState(userData.address);
+  const [nim, setNim] = useState(userData.nim);
   const [avatar, setAvatar] = useState<string | null>(userData.avatar || null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(userData.avatar || null);
   const [showToast, setShowToast] = useState(false);
@@ -46,6 +48,7 @@ export function ProfilePage({ userData, onUpdateProfile, onChangePassword, onDel
     setEmail(userData.email);
     setPhone(formatIndonesianPhoneDisplay(userData.phone));
     setAddress(userData.address);
+    setNim(userData.nim);
     setAvatar(userData.avatar || null);
     setPreviewUrl(userData.avatar || null);
   }, [userData]);
@@ -81,6 +84,7 @@ export function ProfilePage({ userData, onUpdateProfile, onChangePassword, onDel
           avatar: compressedImage,
           phone: normalizeIndonesianPhone(phone),
           address,
+          nim,
         });
 
         if (didSave) {
@@ -110,6 +114,7 @@ export function ProfilePage({ userData, onUpdateProfile, onChangePassword, onDel
       avatar: avatar || undefined,
       phone: normalizeIndonesianPhone(phone),
       address: address.trim(),
+      nim: nim.trim(),
     });
 
     if (didSave) {
@@ -265,6 +270,23 @@ export function ProfilePage({ userData, onUpdateProfile, onChangePassword, onDel
                 <p className="text-xs text-gray-500">
                   Nomor ini akan dipakai sebagai kontak WhatsApp pada laporan barang.
                 </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="nim" className="text-sm font-medium text-gray-700">
+                  NIM
+                </Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    id="nim"
+                    type="text"
+                    value={nim}
+                    onChange={(e) => setNim(e.target.value)}
+                    className="pl-10 rounded-sm"
+                    placeholder="Masukkan NIM"
+                  />
+                </div>
               </div>
 
               {/* Address */}

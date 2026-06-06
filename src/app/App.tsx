@@ -15,6 +15,7 @@ import { LoginPage } from './components/LoginPage';
 import { RegisterPage } from './components/RegisterPage';
 import { UserAvatar } from './components/UserAvatar';
 import { ProfilePage } from './components/ProfilePage';
+import { ReturnVerificationForm } from './components/ReturnVerificationForm';
 import { Footer } from './components/Footer';
 import { Toast } from './components/ui/toast';
 import { ImageWithFallback } from './components/figma/ImageWithFallback';
@@ -23,11 +24,15 @@ import {
   buildReporterIdentityUpdate,
   buildSubmissionSuccessNotification,
   buildItemInsertPayload,
+  getItemStatusLabel,
+  isAdminEmail,
   isMissingReporterIdentityColumnError,
+  parseStoredJson,
   normalizeIndonesianPhone,
   buildUserDataFromAuthUser,
-  parseStoredJson,
+  shouldHideItemFromListings,
   stripReporterIdentityFromItemPayload,
+  type ItemReturnVerification,
   type UserData,
 } from './appState';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
@@ -188,6 +193,7 @@ const emptyUserData: UserData = {
   avatar: '',
   phone: '',
   address: '',
+  nim: '',
 };
 
 type ProfileRow = {
@@ -197,6 +203,7 @@ type ProfileRow = {
   phone: string | null;
   address: string | null;
   avatar_url: string | null;
+  nim?: string | null;
 };
 
 export default function App() {
@@ -211,6 +218,11 @@ export default function App() {
   const [authToastMessage, setAuthToastMessage] = useState('');
   const [showAuthToast, setShowAuthToast] = useState(false);
   const [galleryOwnershipFilter, setGalleryOwnershipFilter] = useState<"all" | "mine">("all");
+  const [returnVerifications, setReturnVerifications] = useState<ItemReturnVerification[]>(() =>
+    parseStoredJson(localStorage.getItem('itemReturnVerifications'), []),
+  );
+  const [selectedVerificationItemId, setSelectedVerificationItemId] = useState<number | null>(null);
+  const [verificationReturnView, setVerificationReturnView] = useState('dashboard');
   const isHistoryNavigationRef = useRef(false);
 
   const alertMissingSupabaseConfig = () => {
@@ -230,6 +242,7 @@ export default function App() {
       avatar: profile?.avatar_url?.trim() || authUserData.avatar,
       phone: profile?.phone?.trim() || authUserData.phone,
       address: profile?.address?.trim() || authUserData.address,
+      nim: profile?.nim?.trim() || authUserData.nim,
     };
   };
 
@@ -240,7 +253,7 @@ export default function App() {
 
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, username, email, phone, address, avatar_url')
+      .select('id, username, email, phone, address, avatar_url, nim')
       .eq('id', userId)
       .maybeSingle();
 
@@ -329,6 +342,10 @@ export default function App() {
   }, [notifications]);
 
   useEffect(() => {
+    localStorage.setItem('itemReturnVerifications', JSON.stringify(returnVerifications));
+  }, [returnVerifications]);
+
+  useEffect(() => {
     const initialState = window.history.state;
     if (!initialState?.view) {
       window.history.replaceState({ view: 'dashboard' }, '');
@@ -409,10 +426,10 @@ export default function App() {
     return true;
   };
 
-  const updateItemStatus = async (id: number, status: string) => {
+  const updateItemStatus = async (id: number, status: string): Promise<boolean> => {
     if (!supabase) {
       alertMissingSupabaseConfig();
-      return;
+      return false;
     }
 
     const { data: { session } } = await supabase.auth.getSession();
@@ -420,7 +437,7 @@ export default function App() {
     if (!session?.user) {
       localStorage.setItem('redirectAfterLogin', currentView);
       setCurrentView('login');
-      return;
+      return false;
     }
 
     const { error } = await supabase.from('items').update({ status }).eq('id', id);
@@ -428,10 +445,12 @@ export default function App() {
     if (error) {
       console.error('Error updating item:', error);
       alert('Terjadi kesalahan saat mengupdate status di database.');
+      return false;
     } else {
       setItems((currentItems) => currentItems.map(item =>
         item.id === id ? { ...item, status } : item
       ));
+      return true;
     }
   };
 
@@ -480,7 +499,7 @@ export default function App() {
     setCurrentView('gallery');
   };
 
-  const handleUpdateProfile = async (data: { email: string; name: string; avatar?: string; phone: string; address: string }): Promise<boolean> => {
+  const handleUpdateProfile = async (data: { email: string; name: string; avatar?: string; phone: string; address: string; nim: string }): Promise<boolean> => {
     if (!supabase) {
       alertMissingSupabaseConfig();
       return false;
@@ -506,6 +525,7 @@ export default function App() {
         avatar_url?: string;
         phone: string;
         address: string;
+        nim: string;
       };
     } = {
       data: {
@@ -515,6 +535,7 @@ export default function App() {
         avatar_url: data.avatar,
         phone: normalizedPhone,
         address: trimmedAddress,
+        nim: data.nim.trim(),
       }
     };
 
@@ -536,12 +557,13 @@ export default function App() {
       phone: normalizedPhone,
       address: trimmedAddress,
       avatar_url: data.avatar || '',
+      nim: data.nim.trim(),
     };
 
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .upsert(profilePayload, { onConflict: 'id' })
-      .select('id, username, email, phone, address, avatar_url')
+      .select('id, username, email, phone, address, avatar_url, nim')
       .maybeSingle();
 
     if (profileError) {
@@ -689,6 +711,83 @@ export default function App() {
     };
     setNotifications((currentNotifications) => [notification, ...currentNotifications]);
 
+    return true;
+  };
+
+  const selectedVerificationItem = items.find((item) => item.id === selectedVerificationItemId) ?? null;
+  const isAdminUser = isAdminEmail(userData.email);
+
+  const openReturnVerification = (itemId: number, fromView: string) => {
+    setSelectedVerificationItemId(itemId);
+    setVerificationReturnView(fromView);
+    setCurrentView('return-verification');
+  };
+
+  const handleSubmitReturnVerification = async (payload: {
+    itemId: number;
+    reporterName: string;
+    reporterEmail: string;
+    reporterPhone: string;
+    reporterNim: string;
+    handoverPhoto: string;
+  }): Promise<boolean> => {
+    const verificationRecord: ItemReturnVerification = {
+      id: Date.now(),
+      itemId: payload.itemId,
+      reporterName: payload.reporterName,
+      reporterEmail: payload.reporterEmail,
+      reporterPhone: payload.reporterPhone,
+      reporterNim: payload.reporterNim,
+      handoverPhoto: payload.handoverPhoto,
+      verificationStatus: 'pending',
+      submittedAt: new Date().toISOString(),
+    };
+
+    setReturnVerifications((currentRecords) => [verificationRecord, ...currentRecords.filter((record) => record.itemId !== payload.itemId)]);
+    setNotifications((currentNotifications) => [
+      {
+        id: Date.now() + 1,
+        message: 'Verifikasi barang sudah ditemukan sedang diproses admin',
+        type: 'verification',
+        date: new Date().toISOString().split('T')[0],
+        read: false,
+        userEmail: payload.reporterEmail,
+      },
+      ...currentNotifications,
+    ]);
+    setCurrentView(verificationReturnView);
+    setSelectedVerificationItemId(null);
+    return true;
+  };
+
+  const handleAdminApproveVerification = async (itemId: number): Promise<boolean> => {
+    const success = await updateItemStatus(itemId, 'returned');
+    if (!success) {
+      return false;
+    }
+
+    const item = items.find((entry) => entry.id === itemId);
+    if (item?.reporter_email) {
+      setNotifications((currentNotifications) => [
+        {
+          id: Date.now() + 2,
+          message: 'Verifikasi barang Anda telah disetujui admin',
+          type: 'verification',
+          date: new Date().toISOString().split('T')[0],
+          read: false,
+          userEmail: item.reporter_email,
+        },
+        ...currentNotifications,
+      ]);
+    }
+
+    setReturnVerifications((currentRecords) =>
+      currentRecords.map((record) =>
+        record.itemId === itemId
+          ? { ...record, verificationStatus: 'approved' }
+          : record,
+      ),
+    );
     return true;
   };
 
@@ -896,6 +995,11 @@ export default function App() {
             onNavigate={navigateToView}
             onUpdateStatus={updateItemStatus}
             canUpdateStatus={isLoggedIn}
+            currentUserEmail={userData.email}
+            isAdminUser={isAdminUser}
+            onOpenReturnVerification={(itemId) => openReturnVerification(itemId, 'dashboard')}
+            onApproveVerification={handleAdminApproveVerification}
+            returnVerifications={returnVerifications}
           />
         )}
 
@@ -939,6 +1043,19 @@ export default function App() {
             currentUserEmail={userData.email}
             ownershipFilter={galleryOwnershipFilter}
             onOwnershipFilterChange={setGalleryOwnershipFilter}
+            isAdminUser={isAdminUser}
+            onOpenReturnVerification={(itemId) => openReturnVerification(itemId, 'gallery')}
+            onApproveVerification={handleAdminApproveVerification}
+            returnVerifications={returnVerifications}
+          />
+        )}
+
+        {currentView === 'return-verification' && selectedVerificationItem && (
+          <ReturnVerificationForm
+            item={selectedVerificationItem}
+            userData={userData}
+            onBack={() => setCurrentView(verificationReturnView)}
+            onSubmit={handleSubmitReturnVerification}
           />
         )}
 
@@ -980,6 +1097,7 @@ export default function App() {
                   avatar: userAvatar,
                   phone: '',
                   address: '',
+                  nim: '',
                 });
               }
 

@@ -27,7 +27,12 @@ import {
 import { NewsCarousel } from "./NewsCarousel";
 import {
   buildWhatsAppUrl,
+  getEffectiveItemStatus,
+  getItemStatusLabel,
   getReporterDisplayName,
+  isReporterForItem,
+  shouldHideItemFromListings,
+  type ItemReturnVerification,
 } from "../appState";
 import heroImage from "figma:asset/706763380527f5c21ddaccdcfcc1a4edffb8b3f2.png";
 import laporHilangImg from "figma:asset/2412be6deea607ec6f8ef7e655eb41ff2289957e.png";
@@ -37,8 +42,13 @@ import merahBg from "../../assets/merah.png";
 interface DashboardProps {
   items: any[];
   onNavigate?: (view: string) => void;
-  onUpdateStatus: (id: number, status: string) => void;
+  onUpdateStatus: (id: number, status: string) => Promise<boolean>;
   canUpdateStatus?: boolean;
+  currentUserEmail?: string;
+  isAdminUser?: boolean;
+  onOpenReturnVerification: (itemId: number) => void;
+  onApproveVerification: (itemId: number) => Promise<boolean>;
+  returnVerifications: ItemReturnVerification[];
 }
 
 export function Dashboard({
@@ -46,11 +56,19 @@ export function Dashboard({
   onNavigate,
   onUpdateStatus,
   canUpdateStatus = false,
+  currentUserEmail = "",
+  isAdminUser = false,
+  onOpenReturnVerification,
+  onApproveVerification,
+  returnVerifications,
 }: DashboardProps) {
-  const lostItems = items.filter(
+  const visibleItems = items.filter(
+    (item) => !shouldHideItemFromListings(item, returnVerifications),
+  );
+  const lostItems = visibleItems.filter(
     (item) => item.type === "lost",
   );
-  const foundItems = items.filter(
+  const foundItems = visibleItems.filter(
     (item) => item.type === "found",
   );
 
@@ -213,11 +231,14 @@ export function Dashboard({
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-[repeat(5,minmax(0,1fr))] gap-3">
-          {items.map((item) => (
+          {visibleItems.map((item) => {
+            const verificationRecord = returnVerifications.find((record) => record.itemId === item.id);
+            const effectiveStatus = getEffectiveItemStatus(item, returnVerifications);
+            return (
             <Dialog key={item.id}>
               <DialogTrigger className="w-full text-left">
-                <Card className="self-start cursor-pointer overflow-hidden rounded-sm gap-0 transition-all duration-500 ease-in-out hover:-translate-y-1 flex flex-col">
-                  <div className="relative h-32 shrink-0 sm:h-48">
+                <Card className={`self-start cursor-pointer overflow-hidden rounded-sm gap-0 transition-all duration-500 ease-in-out hover:-translate-y-1 flex flex-col ${effectiveStatus === "pending_verification" ? "bg-gray-200 text-gray-600" : ""}`}>
+                  <div className={`relative h-32 shrink-0 sm:h-48 ${effectiveStatus === "pending_verification" ? "grayscale" : ""}`}>
                     <ImageWithFallback
                       src={item.image}
                       alt={item.title}
@@ -233,13 +254,15 @@ export function Dashboard({
                     </Badge>
                   </div>
 
-                  <div
-                    className={`px-3 py-1 text-center text-xs font-semibold text-white ${
-                      item.type === "lost"
-                        ? "bg-[#AE0000]"
-                        : "bg-black"
-                    }`}
-                  >
+                    <div
+                      className={`px-3 py-1 text-center text-xs font-semibold text-white ${
+                        effectiveStatus === "pending_verification"
+                          ? "bg-gray-500"
+                          : item.type === "lost"
+                            ? "bg-[#AE0000]"
+                            : "bg-black"
+                      }`}
+                    >
                     {item.type === "lost"
                       ? "Hilang"
                       : "Ditemukan"}
@@ -275,7 +298,7 @@ export function Dashboard({
                 </Card>
               </DialogTrigger>
 
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto rounded-sm">
                 <DialogHeader>
                   <DialogTitle>{item.title}</DialogTitle>
                   <DialogDescription>
@@ -288,7 +311,7 @@ export function Dashboard({
                 </DialogHeader>
 
                 <div className="space-y-4">
-                  <div className="relative h-64">
+                  <div className="relative h-48 sm:h-64">
                     <ImageWithFallback
                       src={item.image}
                       alt={item.title}
@@ -303,7 +326,7 @@ export function Dashboard({
                           ? "destructive"
                           : "default"
                       }
-                      className="rounded-sm"
+                      className="rounded-xs"
                     >
                       {item.type === "lost"
                         ? "Barang Hilang"
@@ -311,22 +334,15 @@ export function Dashboard({
                     </Badge>
                     <Badge
                       variant="secondary"
-                      className="rounded-sm"
+                      className="rounded-xs"
                     >
                       {item.category}
                     </Badge>
                     <Badge
                       variant="outline"
-                      className="rounded-sm"
+                      className="rounded-xs"
                     >
-                      {item.status === "active" &&
-                        "Masih Dicari"}
-                      {item.status === "available" &&
-                        "Tersedia"}
-                      {item.status === "returned" &&
-                        "Sudah Kembali"}
-                      {item.status === "claimed" &&
-                        "Sudah Diambil"}
+                      {getItemStatusLabel(effectiveStatus)}
                     </Badge>
                   </div>
 
@@ -362,10 +378,42 @@ export function Dashboard({
                     </div>
                   </div>
 
+                  {verificationRecord && effectiveStatus === "pending_verification" && (
+                    <div className="space-y-3 rounded-sm border bg-gray-50 p-4">
+                      <h4 className="font-semibold text-sm">Data Verifikasi Serah Terima</h4>
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <div>
+                          <p className="text-muted-foreground text-xs">Nama</p>
+                          <p>{verificationRecord.reporterName}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Email</p>
+                          <p>{verificationRecord.reporterEmail}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">No HP</p>
+                          <p>{verificationRecord.reporterPhone}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">NIM</p>
+                          <p>{verificationRecord.reporterNim}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="mb-2 text-sm text-muted-foreground">Foto Serah Terima</p>
+                        <img
+                          src={verificationRecord.handoverPhoto}
+                          alt="Foto serah terima"
+                          className="max-h-64 w-full max-w-md rounded-sm border bg-white object-contain"
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex gap-2 pt-4 border-t">
                     <Button
                       variant="outline"
-                      className="flex-1"
+                      className="flex-1 rounded-sm"
                       asChild
                     >
                       <a
@@ -381,36 +429,45 @@ export function Dashboard({
                     </Button>
 
                     {canUpdateStatus &&
-                      (item.status === "active" ||
-                        item.status === "available") && (
-                        <>
-                      {item.type === "lost" && (
+                      isReporterForItem(item, currentUserEmail) &&
+                      effectiveStatus === "active" &&
+                      item.type === "lost" && (
                         <Button
-                          onClick={() =>
-                            onUpdateStatus(item.id, "returned")
-                          }
-                          className="flex-1"
+                          onClick={() => onOpenReturnVerification(item.id)}
+                          className="flex-1 rounded-sm"
                         >
-                          Tandai Sudah Ditemukan
+                          Verifikasi Barang Sudah Ditemukan
                         </Button>
                       )}
-                      {item.type === "found" && (
+                    {canUpdateStatus &&
+                      isReporterForItem(item, currentUserEmail) &&
+                      effectiveStatus === "available" &&
+                      item.type === "found" && (
                         <Button
-                          onClick={() =>
-                            onUpdateStatus(item.id, "claimed")
-                          }
-                          className="flex-1"
+                          onClick={() => {
+                            void onUpdateStatus(item.id, "claimed");
+                          }}
+                          className="flex-1 rounded-sm"
                         >
                           Tandai Sudah Diambil
                         </Button>
                       )}
-                        </>
-                      )}
+                    {isAdminUser && effectiveStatus === "pending_verification" && (
+                      <Button
+                        onClick={() => {
+                          void onApproveVerification(item.id);
+                        }}
+                        className="flex-1 rounded-sm bg-black text-white hover:bg-gray-800"
+                      >
+                        Verifikasi Admin
+                      </Button>
+                    )}
                   </div>
                 </div>
               </DialogContent>
             </Dialog>
-          ))}
+            );
+          })}
         </div>
       </div>
 

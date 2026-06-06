@@ -8,10 +8,15 @@ import {
   createPasswordHash,
   formatIndonesianPhoneDisplay,
   getReporterDisplayName,
+  getItemStatusLabel,
+  getEffectiveItemStatus,
+  isAdminEmail,
+  isReporterForItem,
   isMissingReporterIdentityColumnError,
   isPasswordMatch,
   normalizeIndonesianPhone,
   parseStoredJson,
+  shouldHideItemFromListings,
   stripReporterIdentityFromItemPayload,
   validateImageFile,
   validateIndonesianPhone,
@@ -60,6 +65,7 @@ describe("app state helpers", () => {
           avatar_url: "data:image/jpeg;base64,abc",
           phone: "08123456789",
           address: "Jl. Tlogomas No. 246, Malang",
+          nim: "202310370311111",
         },
       }),
     ).toEqual({
@@ -68,6 +74,7 @@ describe("app state helpers", () => {
       avatar: "data:image/jpeg;base64,abc",
       phone: "08123456789",
       address: "Jl. Tlogomas No. 246, Malang",
+      nim: "202310370311111",
     });
   });
 
@@ -82,6 +89,7 @@ describe("app state helpers", () => {
       name: "budi",
       phone: "",
       address: "",
+      nim: "",
     });
   });
 
@@ -151,6 +159,7 @@ describe("app state helpers", () => {
         avatar: "",
         phone: "08123456789",
         address: "Malang",
+        nim: "202310370311001",
       },
     );
 
@@ -218,5 +227,52 @@ describe("app state helpers", () => {
         reporter_email: "kiki-baru@student.umm.ac.id",
       },
     });
+  });
+
+  it("provides item verification status and ownership helpers", () => {
+    expect(getItemStatusLabel("pending_verification")).toBe("Pending Verifikasi");
+    expect(
+      getEffectiveItemStatus(
+        { id: 7, status: "active" },
+        [
+          {
+            id: 99,
+            itemId: 7,
+            reporterName: "Kiki",
+            reporterEmail: "kiki@student.umm.ac.id",
+            reporterPhone: "628123456789",
+            reporterNim: "202310370311111",
+            handoverPhoto: "data:image/png;base64,abc",
+            verificationStatus: "pending",
+            submittedAt: "2026-06-06T09:00:00.000Z",
+          },
+        ],
+      ),
+    ).toBe("pending_verification");
+    expect(
+      isReporterForItem(
+        { reporter_email: "kiki@student.umm.ac.id" },
+        "kiki@student.umm.ac.id",
+      ),
+    ).toBe(true);
+    expect(isAdminEmail("security@umm.ac.id")).toBe(true);
+    expect(
+      shouldHideItemFromListings(
+        { id: 7, status: "active" },
+        [
+          {
+            id: 100,
+            itemId: 7,
+            reporterName: "Kiki",
+            reporterEmail: "kiki@student.umm.ac.id",
+            reporterPhone: "628123456789",
+            reporterNim: "202310370311111",
+            handoverPhoto: "data:image/png;base64,abc",
+            verificationStatus: "approved",
+            submittedAt: "2026-06-06T10:00:00.000Z",
+          },
+        ],
+      ),
+    ).toBe(true);
   });
 });

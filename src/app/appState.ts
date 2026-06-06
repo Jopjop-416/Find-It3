@@ -11,6 +11,7 @@ export type UserData = {
   avatar: string;
   phone: string;
   address: string;
+  nim: string;
 };
 
 export type ReportFormData = {
@@ -48,6 +49,41 @@ export type ReporterIdentityUpdate = {
   };
 };
 
+export type ItemReturnVerification = {
+  id: number;
+  itemId: number;
+  reporterName: string;
+  reporterEmail: string;
+  reporterPhone: string;
+  reporterNim: string;
+  handoverPhoto: string;
+  verificationStatus: "pending" | "approved";
+  submittedAt: string;
+};
+
+export function getEffectiveItemStatus(
+  item: Record<string, unknown>,
+  returnVerifications: ItemReturnVerification[] = [],
+): string {
+  const itemId =
+    typeof item.id === "number"
+      ? item.id
+      : Number(item.id);
+  const verificationRecord = returnVerifications.find(
+    (record) => record.itemId === itemId,
+  );
+
+  if (verificationRecord?.verificationStatus === "approved") {
+    return "verified_returned";
+  }
+
+  if (verificationRecord?.verificationStatus === "pending") {
+    return "pending_verification";
+  }
+
+  return typeof item.status === "string" ? item.status : "";
+}
+
 export function parseStoredJson<T>(value: string | null, fallback: T): T {
   if (!value) {
     return fallback;
@@ -72,6 +108,7 @@ export function buildUserDataFromAuthUser(user: SupabaseAuthUserLike | null | un
   const metadataAvatar = metadata.avatar_url ?? metadata.avatar;
   const metadataPhone = metadata.phone;
   const metadataAddress = metadata.address;
+  const metadataNim = metadata.nim;
 
   return {
     email,
@@ -82,6 +119,7 @@ export function buildUserDataFromAuthUser(user: SupabaseAuthUserLike | null | un
     avatar: typeof metadataAvatar === "string" ? metadataAvatar : "",
     phone: typeof metadataPhone === "string" ? metadataPhone : "",
     address: typeof metadataAddress === "string" ? metadataAddress : "",
+    nim: typeof metadataNim === "string" ? metadataNim : "",
   };
 }
 
@@ -230,6 +268,52 @@ export function buildReporterIdentityUpdate(
       reporter_email: nextUserData.email.trim(),
     },
   };
+}
+
+export function getItemStatusLabel(status: string): string {
+  switch (status) {
+    case "active":
+      return "Masih Dicari";
+    case "available":
+      return "Tersedia";
+    case "returned":
+      return "Sudah Kembali";
+    case "claimed":
+      return "Sudah Diambil";
+    case "pending_verification":
+      return "Pending Verifikasi";
+    case "verified_returned":
+      return "Terverifikasi";
+    default:
+      return status;
+  }
+}
+
+export function isReporterForItem(
+  item: Record<string, unknown>,
+  userEmail: string,
+): boolean {
+  return (
+    typeof item.reporter_email === "string"
+    && item.reporter_email === userEmail
+  );
+}
+
+export function isAdminEmail(email: string): boolean {
+  return new Set([
+    "admin@gmail.com",
+    "security@umm.ac.id",
+    "info@umm.ac.id",
+    "sekun@umm.ac.id",
+  ]).has(email.trim().toLowerCase());
+}
+
+export function shouldHideItemFromListings(
+  item: Record<string, unknown>,
+  returnVerifications: ItemReturnVerification[] = [],
+): boolean {
+  const effectiveStatus = getEffectiveItemStatus(item, returnVerifications);
+  return effectiveStatus === "verified_returned" || effectiveStatus === "returned";
 }
 
 export async function createPasswordHash(password: string): Promise<string> {
