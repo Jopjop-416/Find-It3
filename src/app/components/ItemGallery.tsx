@@ -229,31 +229,17 @@ export function ItemGallery({
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-[repeat(5,minmax(0,1fr))] gap-3">
         {filteredItems.map((item) => (
           <Dialog key={item.id}>
-            <DialogTrigger className="text-left w-full h-full">
-              <Card className="h-full cursor-pointer overflow-hidden rounded-sm transition-all duration-500 ease-in-out hover:-translate-y-1 flex flex-col">
+            <DialogTrigger className="w-full text-left">
+              <Card className="self-start cursor-pointer overflow-hidden rounded-sm gap-0 transition-all duration-500 ease-in-out hover:-translate-y-1 flex flex-col">
                 <div className="relative h-32 shrink-0 sm:h-48">
                   <ImageWithFallback
                     src={item.image}
                     alt={item.title}
                     className="w-full h-full object-cover"
                   />
-                  {/* LOST/FOUND Badge - Top Left */}
-                  <Badge
-                    variant={
-                      item.type === "lost"
-                        ? "destructive"
-                        : "default"
-                    }
-                    className="absolute top-2 left-2 rounded-sm font-medium text-[10px] px-1.5 py-0.5 sm:top-3 sm:left-3 sm:px-2"
-                  >
-                    {item.type === "lost"
-                      ? "Hilang"
-                      : "Ditemukan"}
-                  </Badge>
-                  {/* Category Badge - Top Right */}
                   <Badge
                     variant="secondary"
-                    className="absolute top-2 right-2 max-w-[48%] rounded-[2px] bg-white/90 text-gray-800 hover:bg-white text-[10px] px-1.5 py-0.5 sm:top-3 sm:right-3 sm:max-w-[45%] sm:px-2"
+                    className="absolute top-2 right-2 max-w-[48%] rounded-[2px] bg-white/95 text-gray-800 hover:bg-white text-[10px] px-1.5 py-0.5 sm:top-3 sm:right-3 sm:max-w-[45%] sm:px-2"
                   >
                     <span className="line-clamp-1 break-all">
                       {item.category}
@@ -261,15 +247,27 @@ export function ItemGallery({
                   </Badge>
                 </div>
 
-                <CardContent className="flex flex-1 flex-col p-3 pt-2 sm:p-4 sm:pt-1">
-                  <h3 className="mb-1.5 line-clamp-1 text-sm font-semibold sm:mb-2 sm:text-base">
+                <div
+                  className={`px-3 py-2 text-center text-xs font-semibold text-white ${
+                    item.type === "lost"
+                      ? "bg-[#AE0000]"
+                      : "bg-black"
+                  }`}
+                >
+                  {item.type === "lost"
+                    ? "Hilang"
+                    : "Ditemukan"}
+                </div>
+
+                <CardContent className="flex flex-col p-3 pt-2.5 sm:p-3.5 sm:pt-3">
+                  <h3 className="mb-1 line-clamp-2 text-sm font-semibold leading-snug sm:mb-1.5 sm:text-base">
                     {item.title}
                   </h3>
-                  <p className="mb-2 line-clamp-2 text-[11px] text-muted-foreground sm:mb-3 sm:text-xs">
+                  <p className="mb-2 line-clamp-1 text-[11px] text-muted-foreground sm:mb-2.5 sm:text-xs">
                     {item.description}
                   </p>
 
-                  <div className="mb-2.5 space-y-1.5 sm:mb-3">
+                  <div className="space-y-1.5">
                     <div className="flex min-w-0 items-center text-[11px] text-muted-foreground sm:text-xs">
                       <MapPin className="mr-1 h-3 w-3 shrink-0 text-orange-500 sm:mr-1.5 sm:h-3.5 sm:w-3.5" />
                       <span className="line-clamp-1">
@@ -288,26 +286,6 @@ export function ItemGallery({
                       )}
                     </div>
                   </div>
-
-                  {/* Status Badge */}
-                  <Badge
-                    variant={
-                      item.status === "active" ||
-                      item.status === "available"
-                        ? "outline"
-                        : "secondary"
-                    }
-                    className="mt-auto w-fit rounded-sm text-[11px] sm:text-xs"
-                  >
-                    {item.status === "active" &&
-                      "Masih Dicari"}
-                    {item.status === "available" &&
-                      "Tersedia"}
-                    {item.status === "returned" &&
-                      "Sudah Kembali"}
-                    {item.status === "claimed" &&
-                      "Sudah Diambil"}
-                  </Badge>
                 </CardContent>
               </Card>
             </DialogTrigger>
