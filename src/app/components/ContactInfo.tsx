@@ -18,6 +18,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import merahBg from "../../assets/merah.png";
+import biruBg from "../../assets/biru.png";
 
 export function ContactInfo() {
   const campusMapEmbedUrl =
@@ -119,14 +120,14 @@ export function ContactInfo() {
               key={index}
               className={
                 action.urgent
-                  ? "relative overflow-hidden border-red-200"
-                  : ""
+                  ? "relative overflow-hidden rounded-sm border-red-200"
+                  : "relative overflow-hidden rounded-sm border-blue-200"
               }
             >
-              {action.urgent && (
+              {(action.urgent || !action.urgent) && (
                 <>
                   <img
-                    src={merahBg}
+                    src={action.urgent ? merahBg : biruBg}
                     alt=""
                     aria-hidden="true"
                     className="absolute inset-0 h-full w-full object-cover"
@@ -135,14 +136,14 @@ export function ContactInfo() {
                 </>
               )}
               <CardContent
-                className={`relative z-10 p-4 ${action.urgent ? "text-white" : ""}`}
+                className="relative z-10 p-4 text-white"
               >
                 <div className="flex items-start space-x-3">
                   <div
-                    className={`p-2 rounded-lg ${action.urgent ? "bg-white/15 backdrop-blur-sm" : "bg-blue-100"}`}
+                    className="rounded-sm bg-white/15 p-2 backdrop-blur-sm"
                   >
                     <Icon
-                      className={`w-5 h-5 ${action.urgent ? "text-white" : "text-blue-600"}`}
+                      className="w-5 h-5 text-white"
                     />
                   </div>
                   <div className="flex-1">
@@ -150,7 +151,7 @@ export function ContactInfo() {
                       {action.title}
                     </h3>
                     <p
-                      className={`text-sm mb-3 ${action.urgent ? "text-white/90" : "text-muted-foreground"}`}
+                      className="mb-3 text-sm text-white/90"
                     >
                       {action.description}
                     </p>
@@ -163,8 +164,8 @@ export function ContactInfo() {
                       }
                       className={
                         action.urgent
-                          ? "w-full bg-red-700 text-white hover:bg-black hover:text-white text-xs"
-                          : "w-full"
+                          ? "w-full rounded-sm bg-red-700 text-white hover:bg-black hover:text-white text-xs"
+                          : "w-full rounded-sm bg-black text-white hover:bg-white hover:text-black text-xs"
                       }
                     >
                       {action.action}
@@ -184,7 +185,7 @@ export function ContactInfo() {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {contactPoints.map((contact, index) => (
-            <Card key={index}>
+            <Card key={index} className="rounded-sm">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">
@@ -195,6 +196,11 @@ export function ContactInfo() {
                       contact.type === "primary"
                         ? "default"
                         : "secondary"
+                    }
+                    className={
+                      contact.type === "primary"
+                        ? "rounded-sm"
+                        : "rounded-[2px]"
                     }
                   >
                     {contact.type === "primary" && "24/7"}
@@ -228,7 +234,7 @@ export function ContactInfo() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1"
+                    className="flex-1 rounded-sm"
                   >
                     <Phone className="w-4 h-4 mr-1" />
                     Telepon
@@ -236,7 +242,7 @@ export function ContactInfo() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1"
+                    className="flex-1 rounded-sm"
                   >
                     <Mail className="w-4 h-4 mr-1" />
                     Email
@@ -300,7 +306,7 @@ export function ContactInfo() {
         </h2>
         <div className="space-y-4">
           {faqs.map((faq, index) => (
-            <Card key={index}>
+            <Card key={index} className="rounded-sm">
               <CardContent className="p-4">
                 <h3 className="font-semibold mb-2">
                   {faq.question}
@@ -315,7 +321,7 @@ export function ContactInfo() {
       </div>
 
       {/* Operational Hours */}
-      <Card>
+      <Card className="rounded-sm">
         <CardHeader>
           <CardTitle>Jam Operasional</CardTitle>
         </CardHeader>
@@ -373,13 +379,13 @@ export function ContactInfo() {
       </Card>
 
       {/* Location Map */}
-      <Card>
+      <Card className="rounded-sm">
         <CardHeader>
           <CardTitle>Lokasi Kampus</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="bg-muted rounded-lg h-64 overflow-hidden">
+            <div className="bg-muted rounded-sm h-64 overflow-hidden">
               <iframe
                 src={campusMapEmbedUrl}
                 title="Peta Lokasi Kampus Universitas Muhammadiyah Malang"
@@ -390,13 +396,21 @@ export function ContactInfo() {
               />
             </div>
             <div className="flex space-x-2">
-              <Button variant="outline" className="flex-1" asChild>
+              <Button
+                variant="outline"
+                className="flex-1 rounded-sm"
+                asChild
+              >
                 <a href={campusMapUrl} target="_blank" rel="noreferrer">
                 <MapPin className="w-4 h-4 mr-2" />
                 Buka Google Maps
                 </a>
               </Button>
-              <Button variant="outline" className="flex-1" asChild>
+              <Button
+                variant="outline"
+                className="flex-1 rounded-sm"
+                asChild
+              >
                 <a href={campusDirectionsUrl} target="_blank" rel="noreferrer">
                 Petunjuk Arah
                 </a>

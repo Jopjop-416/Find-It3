@@ -182,7 +182,7 @@ export function ReportFoundForm({
         onClose={() => setShowToast(false)}
       />
       <div className="max-w-2xl mx-auto">
-        <Card>
+        <Card className="rounded-sm">
           <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Eye className="w-5 h-5 text-green-600" />
@@ -190,7 +190,7 @@ export function ReportFoundForm({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Alert className="mb-6">
+          <Alert className="mb-6 rounded-sm">
             <MapPin className="h-4 w-4" />
             <AlertDescription>
               Terima kasih telah menemukan barang! Silakan laporkan dan serahkan ke security atau pusat informasi terdekat.
@@ -200,13 +200,14 @@ export function ReportFoundForm({
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="title">Nama/Jenis Barang *</Label>
-              <Input
-                id="title"
+                <Input
+                  id="title"
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                 placeholder="Contoh: Dompet Kulit Coklat"
-                required
-              />
+                  required
+                  className="rounded-sm"
+                />
             </div>
 
             <div className="space-y-2">
@@ -216,10 +217,10 @@ export function ReportFoundForm({
                 onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
                 required
               >
-                <SelectTrigger>
+                <SelectTrigger className="rounded-sm">
                   <SelectValue placeholder="Pilih kategori barang" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-sm">
                   {categories.map((category) => (
                     <SelectItem key={category} value={category}>
                       {category}
@@ -231,14 +232,15 @@ export function ReportFoundForm({
 
             <div className="space-y-2">
               <Label htmlFor="description">Deskripsi Barang *</Label>
-              <Textarea
-                id="description"
+                <Textarea
+                  id="description"
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="Berikan deskripsi detail barang yang ditemukan (warna, merk, kondisi, isi barang jika relevan)"
                 rows={4}
-                required
-              />
+                  required
+                  className="rounded-sm"
+                />
             </div>
 
             <div className="space-y-2">
@@ -248,10 +250,10 @@ export function ReportFoundForm({
                 onValueChange={(value) => setFormData(prev => ({ ...prev, location: value }))}
                 required
               >
-                <SelectTrigger>
+                <SelectTrigger className="rounded-sm">
                   <SelectValue placeholder="Pilih lokasi menemukan barang" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-sm">
                   {commonLocations.map((location) => (
                     <SelectItem key={location} value={location}>
                       {location}
@@ -269,7 +271,7 @@ export function ReportFoundForm({
                 value={formatIndonesianPhoneDisplay(userPhone)}
                 readOnly
                 placeholder="Lengkapi nomor HP di profil"
-                className="bg-muted"
+                className="rounded-sm bg-muted"
               />
               <p className="text-xs text-muted-foreground">
                 Nomor diambil dari profil Anda dan akan dipakai untuk chat WhatsApp.
@@ -277,7 +279,7 @@ export function ReportFoundForm({
             </div>
 
             {validationError && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="rounded-sm">
                 <MapPin className="h-4 w-4" />
                 <AlertDescription>{validationError}</AlertDescription>
               </Alert>
@@ -287,7 +289,7 @@ export function ReportFoundForm({
               <Label htmlFor="image">Foto Barang *</Label>
               <div className="space-y-4">
                 {!imagePreview ? (
-                  <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+                  <div className="border-2 border-dashed border-border rounded-sm p-6 text-center">
                     <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
                     <p className="text-sm text-muted-foreground mb-2">
                       Upload foto barang yang ditemukan
@@ -299,7 +301,7 @@ export function ReportFoundForm({
                       type="file"
                       accept="image/*"
                       onChange={handleImageUpload}
-                      className="max-w-xs mx-auto"
+                      className="mx-auto max-w-xs rounded-sm"
                       required
                     />
                   </div>
@@ -308,13 +310,13 @@ export function ReportFoundForm({
                     <img
                       src={imagePreview}
                       alt="Preview"
-                      className="w-full h-48 object-cover rounded-lg"
+                      className="w-full h-48 object-cover rounded-sm"
                     />
                     <Button
                       type="button"
                       variant="destructive"
                       size="sm"
-                      className="absolute top-2 right-2"
+                      className="absolute top-2 right-2 rounded-sm"
                       onClick={removeImage}
                     >
                       <X className="w-4 h-4" />
@@ -324,7 +326,7 @@ export function ReportFoundForm({
               </div>
             </div>
 
-            <div className="bg-muted p-4 rounded-lg">
+            <div className="bg-muted p-4 rounded-sm">
               <h4 className="font-semibold mb-2">Langkah Selanjutnya:</h4>
               <ol className="text-sm text-muted-foreground space-y-1">
                 <li>1. Serahkan barang ke security atau pusat informasi terdekat</li>
@@ -336,7 +338,7 @@ export function ReportFoundForm({
 
             <Button 
               type="submit" 
-              className="w-full" 
+              className="w-full rounded-sm" 
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Mengirim Laporan...' : 'Kirim Laporan Penemuan'}

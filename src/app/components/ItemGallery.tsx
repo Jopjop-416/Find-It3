@@ -121,7 +121,7 @@ export function ItemGallery({
       </div>
 
       {/* Search and Filters */}
-      <Card>
+      <Card className="rounded-sm">
         <CardContent className="p-6">
           <div className="space-y-4">
             {/* Search Bar */}
@@ -131,7 +131,7 @@ export function ItemGallery({
                 placeholder="Cari barang berdasarkan nama, deskripsi, atau lokasi..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="rounded-sm pl-10"
               />
             </div>
 
@@ -141,10 +141,10 @@ export function ItemGallery({
                 value={categoryFilter}
                 onValueChange={setCategoryFilter}
               >
-                <SelectTrigger>
+                <SelectTrigger className="rounded-sm">
                   <SelectValue placeholder="Semua Kategori" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-sm">
                   <SelectItem value="all">
                     Semua Kategori
                   </SelectItem>
@@ -160,10 +160,10 @@ export function ItemGallery({
                 value={typeFilter}
                 onValueChange={setTypeFilter}
               >
-                <SelectTrigger>
+                <SelectTrigger className="rounded-sm">
                   <SelectValue placeholder="Semua Jenis" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-sm">
                   <SelectItem value="all">
                     Semua Jenis
                   </SelectItem>
@@ -180,10 +180,10 @@ export function ItemGallery({
                 value={statusFilter}
                 onValueChange={setStatusFilter}
               >
-                <SelectTrigger>
+                <SelectTrigger className="rounded-sm">
                   <SelectValue placeholder="Semua Status" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-sm">
                   <SelectItem value="all">
                     Semua Status
                   </SelectItem>
@@ -214,6 +214,7 @@ export function ItemGallery({
                   variant="outline"
                   size="sm"
                   onClick={clearFilters}
+                  className="rounded-sm"
                 >
                   <X className="w-4 h-4 mr-1" />
                   Hapus Filter
@@ -229,7 +230,7 @@ export function ItemGallery({
         {filteredItems.map((item) => (
           <Dialog key={item.id}>
             <DialogTrigger className="text-left w-full h-full">
-              <Card className="h-full cursor-pointer overflow-hidden transition-all duration-500 ease-in-out hover:-translate-y-1 flex flex-col">
+              <Card className="h-full cursor-pointer overflow-hidden rounded-sm transition-all duration-500 ease-in-out hover:-translate-y-1 flex flex-col">
                 <div className="relative h-32 shrink-0 sm:h-48">
                   <ImageWithFallback
                     src={item.image}
@@ -243,7 +244,7 @@ export function ItemGallery({
                         ? "destructive"
                         : "default"
                     }
-                    className="absolute top-2 left-2 font-medium text-[10px] px-1.5 py-0.5 sm:top-3 sm:left-3 sm:px-2"
+                    className="absolute top-2 left-2 rounded-sm font-medium text-[10px] px-1.5 py-0.5 sm:top-3 sm:left-3 sm:px-2"
                   >
                     {item.type === "lost"
                       ? "Hilang"
@@ -252,7 +253,7 @@ export function ItemGallery({
                   {/* Category Badge - Top Right */}
                   <Badge
                     variant="secondary"
-                    className="absolute top-2 right-2 max-w-[48%] bg-white/90 text-gray-800 hover:bg-white text-[10px] px-1.5 py-0.5 sm:top-3 sm:right-3 sm:max-w-[45%] sm:px-2"
+                    className="absolute top-2 right-2 max-w-[48%] rounded-[2px] bg-white/90 text-gray-800 hover:bg-white text-[10px] px-1.5 py-0.5 sm:top-3 sm:right-3 sm:max-w-[45%] sm:px-2"
                   >
                     <span className="line-clamp-1 break-all">
                       {item.category}
@@ -296,7 +297,7 @@ export function ItemGallery({
                         ? "outline"
                         : "secondary"
                     }
-                    className="mt-auto w-fit text-[11px] sm:text-xs"
+                    className="mt-auto w-fit rounded-sm text-[11px] sm:text-xs"
                   >
                     {item.status === "active" &&
                       "Masih Dicari"}
@@ -328,7 +329,7 @@ export function ItemGallery({
                   <ImageWithFallback
                     src={item.image}
                     alt={item.title}
-                    className="w-full h-full object-cover rounded-lg"
+                    className="w-full h-full object-cover rounded-sm"
                   />
                 </div>
 
@@ -339,15 +340,16 @@ export function ItemGallery({
                         ? "destructive"
                         : "default"
                     }
+                    className="rounded-sm"
                   >
                     {item.type === "lost"
                       ? "Barang Hilang"
                       : "Barang Ditemukan"}
                   </Badge>
-                  <Badge variant="secondary">
+                  <Badge variant="secondary" className="rounded-[2px]">
                     {item.category}
                   </Badge>
-                  <Badge variant="outline">
+                  <Badge variant="outline" className="rounded-sm">
                     {item.status === "active" && "Masih Dicari"}
                     {item.status === "available" && "Tersedia"}
                     {item.status === "returned" &&
@@ -390,7 +392,7 @@ export function ItemGallery({
                 <div className="flex gap-2 pt-4 border-t">
                   <Button
                     variant="outline"
-                    className="flex-1"
+                    className="flex-1 rounded-sm"
                     asChild
                   >
                     <a
@@ -414,7 +416,7 @@ export function ItemGallery({
                               "returned",
                             )
                           }
-                          className="flex-1"
+                          className="flex-1 rounded-sm"
                         >
                           Tandai Sudah Ditemukan
                         </Button>
@@ -427,7 +429,7 @@ export function ItemGallery({
                               "claimed",
                             )
                           }
-                          className="flex-1"
+                          className="flex-1 rounded-sm"
                         >
                           Tandai Sudah Diambil
                         </Button>
@@ -442,7 +444,7 @@ export function ItemGallery({
       </div>
 
       {filteredItems.length === 0 && (
-        <Card>
+        <Card className="rounded-sm">
           <CardContent className="p-12 text-center">
             <Filter className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="font-semibold mb-2">
@@ -453,7 +455,7 @@ export function ItemGallery({
               berbeda
             </p>
             {hasActiveFilters && (
-              <Button variant="outline" onClick={clearFilters}>
+              <Button variant="outline" onClick={clearFilters} className="rounded-sm">
                 Hapus Semua Filter
               </Button>
             )}

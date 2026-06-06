@@ -182,7 +182,7 @@ export function ReportLostForm({
         onClose={() => setShowToast(false)}
       />
       <div className="max-w-2xl mx-auto">
-        <Card>
+        <Card className="rounded-sm">
           <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <AlertTriangle className="w-5 h-5 text-destructive" />
@@ -190,7 +190,7 @@ export function ReportLostForm({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Alert className="mb-6">
+          <Alert className="mb-6 rounded-sm">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
               Pastikan informasi yang Anda berikan akurat dan lengkap untuk mempermudah proses pencarian barang.
@@ -200,13 +200,14 @@ export function ReportLostForm({
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="title">Nama Barang *</Label>
-              <Input
-                id="title"
+                <Input
+                  id="title"
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                 placeholder="Contoh: iPhone 14 Pro - Hitam"
-                required
-              />
+                  required
+                  className="rounded-sm"
+                />
             </div>
 
             <div className="space-y-2">
@@ -216,10 +217,10 @@ export function ReportLostForm({
                 onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
                 required
               >
-                <SelectTrigger>
+                <SelectTrigger className="rounded-sm">
                   <SelectValue placeholder="Pilih kategori barang" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-sm">
                   {categories.map((category) => (
                     <SelectItem key={category} value={category}>
                       {category}
@@ -231,14 +232,15 @@ export function ReportLostForm({
 
             <div className="space-y-2">
               <Label htmlFor="description">Deskripsi Detail *</Label>
-              <Textarea
-                id="description"
+                <Textarea
+                  id="description"
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="Berikan deskripsi yang detail tentang barang (warna, merk, ciri khas, kondisi, dll)"
                 rows={4}
-                required
-              />
+                  required
+                  className="rounded-sm"
+                />
             </div>
 
             <div className="space-y-2">
@@ -248,10 +250,10 @@ export function ReportLostForm({
                 onValueChange={(value) => setFormData(prev => ({ ...prev, location: value }))}
                 required
               >
-                <SelectTrigger>
+                <SelectTrigger className="rounded-sm">
                   <SelectValue placeholder="Pilih lokasi terakhir melihat barang" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-sm">
                   {commonLocations.map((location) => (
                     <SelectItem key={location} value={location}>
                       {location}
@@ -262,7 +264,7 @@ export function ReportLostForm({
             </div>
 
             {validationError && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="rounded-sm">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>{validationError}</AlertDescription>
               </Alert>
@@ -276,7 +278,7 @@ export function ReportLostForm({
                 value={formatIndonesianPhoneDisplay(userPhone)}
                 readOnly
                 placeholder="Lengkapi nomor HP di profil"
-                className="bg-muted"
+                className="rounded-sm bg-muted"
               />
               <p className="text-xs text-muted-foreground">
                 Nomor diambil dari profil Anda dan akan dipakai untuk chat WhatsApp.
@@ -287,7 +289,7 @@ export function ReportLostForm({
               <Label htmlFor="image">Foto Barang (Opsional)</Label>
               <div className="space-y-4">
                 {!imagePreview ? (
-                  <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+                  <div className="border-2 border-dashed border-border rounded-sm p-6 text-center">
                     <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
                     <p className="text-sm text-muted-foreground mb-2">
                       Upload foto barang jika tersedia
@@ -296,7 +298,7 @@ export function ReportLostForm({
                       type="file"
                       accept="image/*"
                       onChange={handleImageUpload}
-                      className="max-w-xs mx-auto"
+                      className="mx-auto max-w-xs rounded-sm"
                     />
                   </div>
                 ) : (
@@ -304,13 +306,13 @@ export function ReportLostForm({
                     <img
                       src={imagePreview}
                       alt="Preview"
-                      className="w-full h-48 object-cover rounded-lg"
+                      className="w-full h-48 object-cover rounded-sm"
                     />
                     <Button
                       type="button"
                       variant="destructive"
                       size="sm"
-                      className="absolute top-2 right-2"
+                      className="absolute top-2 right-2 rounded-sm"
                       onClick={removeImage}
                     >
                       <X className="w-4 h-4" />
@@ -322,7 +324,7 @@ export function ReportLostForm({
 
             <Button 
               type="submit" 
-              className="w-full" 
+              className="w-full rounded-sm" 
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Mengirim Laporan...' : 'Kirim Laporan Kehilangan'}

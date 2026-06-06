@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { Search, Plus, Bell, Home, FileText, Camera, Contact, Menu, X, LogIn, User, LogOut } from 'lucide-react';
 import { Button } from './components/ui/button';
@@ -204,6 +204,7 @@ export default function App() {
   const [userData, setUserData] = useState<UserData>(emptyUserData);
   const [authToastMessage, setAuthToastMessage] = useState('');
   const [showAuthToast, setShowAuthToast] = useState(false);
+  const isHistoryNavigationRef = useRef(false);
 
   const alertMissingSupabaseConfig = () => {
     alert('Supabase belum dikonfigurasi. Tambahkan VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY di environment variables Vercel.');
@@ -319,6 +320,37 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('notifications', JSON.stringify(notifications));
   }, [notifications]);
+
+  useEffect(() => {
+    const initialState = window.history.state;
+    if (!initialState?.view) {
+      window.history.replaceState({ view: 'dashboard' }, '');
+    }
+
+    const handlePopState = (event: PopStateEvent) => {
+      isHistoryNavigationRef.current = true;
+      setCurrentView(event.state?.view || 'dashboard');
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isHistoryNavigationRef.current) {
+      isHistoryNavigationRef.current = false;
+      return;
+    }
+
+    if (window.history.state?.view === currentView) {
+      return;
+    }
+
+    window.history.pushState({ view: currentView }, '');
+  }, [currentView]);
 
   const addItem = async (newItem: any) => {
     if (!supabase) {

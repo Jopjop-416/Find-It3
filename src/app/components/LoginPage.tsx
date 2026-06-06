@@ -91,7 +91,7 @@ export function LoginPage({ onLoginSuccess, onSwitchToRegister }: LoginPageProps
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             {message && (
-              <div className="rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-900">
+              <div className="rounded-sm border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-900">
                 {message}
               </div>
             )}
@@ -108,7 +108,7 @@ export function LoginPage({ onLoginSuccess, onSwitchToRegister }: LoginPageProps
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                className="w-full h-12 rounded-sm border border-gray-300 bg-white px-4 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               />
             </div>
 
@@ -124,7 +124,7 @@ export function LoginPage({ onLoginSuccess, onSwitchToRegister }: LoginPageProps
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                className="w-full h-12 rounded-sm border border-gray-300 bg-white px-4 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               />
             </div>
 
@@ -156,7 +156,7 @@ export function LoginPage({ onLoginSuccess, onSwitchToRegister }: LoginPageProps
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="w-full h-12 bg-black text-white hover:bg-gray-800 rounded-lg font-medium"
+              className="w-full h-12 rounded-sm bg-black text-white hover:bg-gray-800 font-medium"
             >
               {isSubmitting ? "Signing in..." : "Sign in"}
             </Button>
@@ -178,7 +178,7 @@ export function LoginPage({ onLoginSuccess, onSwitchToRegister }: LoginPageProps
               <Button
                 type="button"
                 variant="outline"
-                className="h-12 border border-gray-300 hover:bg-gray-50 rounded-lg"
+                className="h-12 rounded-sm border border-gray-300 hover:bg-gray-50"
               >
                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                   <path
@@ -203,7 +203,7 @@ export function LoginPage({ onLoginSuccess, onSwitchToRegister }: LoginPageProps
               <Button
                 type="button"
                 variant="outline"
-                className="h-12 border border-gray-300 hover:bg-gray-50 rounded-lg"
+                className="h-12 rounded-sm border border-gray-300 hover:bg-gray-50"
               >
                 <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />

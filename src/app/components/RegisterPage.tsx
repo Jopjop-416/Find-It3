@@ -108,7 +108,7 @@ export function RegisterPage({
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {message && (
-                <div className="rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-900">
+                <div className="rounded-sm border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-900">
                   {message}
                 </div>
               )}
@@ -127,7 +127,7 @@ export function RegisterPage({
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
-                  className="w-full h-11 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                  className="w-full h-11 rounded-sm border border-gray-300 bg-white px-4 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
               </div>
 
@@ -145,7 +145,7 @@ export function RegisterPage({
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full h-11 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                  className="w-full h-11 rounded-sm border border-gray-300 bg-white px-4 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
               </div>
 
@@ -163,7 +163,7 @@ export function RegisterPage({
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full h-11 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                  className="w-full h-11 rounded-sm border border-gray-300 bg-white px-4 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
               </div>
 
@@ -181,14 +181,14 @@ export function RegisterPage({
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  className="w-full h-11 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                  className="w-full h-11 rounded-sm border border-gray-300 bg-white px-4 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
               </div>
 
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full h-11 bg-black text-white hover:bg-gray-800 rounded-lg font-medium"
+                className="w-full h-11 rounded-sm bg-black text-white hover:bg-gray-800 font-medium"
               >
                 {isSubmitting ? "Signing up..." : "Sign up"}
               </Button>
@@ -208,7 +208,7 @@ export function RegisterPage({
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-11 border border-gray-300 hover:bg-gray-50 rounded-lg"
+                  className="h-11 rounded-sm border border-gray-300 hover:bg-gray-50"
                 >
                   <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                     <path
@@ -233,7 +233,7 @@ export function RegisterPage({
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-11 border border-gray-300 hover:bg-gray-50 rounded-lg"
+                  className="h-11 rounded-sm border border-gray-300 hover:bg-gray-50"
                 >
                   <svg
                     className="w-5 h-5 mr-2"
