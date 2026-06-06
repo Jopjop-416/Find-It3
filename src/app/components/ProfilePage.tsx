@@ -6,7 +6,7 @@ import { Label } from "./ui/label";
 import { Toast } from "./ui/toast";
 import { ChangePasswordDialog } from "./ChangePasswordDialog";
 import { DeleteAccountDialog } from "./DeleteAccountDialog";
-import { User, Camera, Mail, Phone, MapPin, Save } from "lucide-react";
+import { User, Camera, Mail, Phone, MapPin, Save, Search } from "lucide-react";
 import {
   compressImage,
   formatIndonesianPhoneDisplay,
@@ -26,9 +26,10 @@ interface ProfilePageProps {
   onUpdateProfile: (data: { email: string; name: string; avatar?: string; phone: string; address: string }) => Promise<boolean>;
   onChangePassword: (oldPassword: string, newPassword: string) => boolean | Promise<boolean>;
   onDeleteAccount: (confirmation: string, email: string) => boolean | Promise<boolean>;
+  onBrowseOwnReports: () => void;
 }
 
-export function ProfilePage({ userData, onUpdateProfile, onChangePassword, onDeleteAccount }: ProfilePageProps) {
+export function ProfilePage({ userData, onUpdateProfile, onChangePassword, onDeleteAccount, onBrowseOwnReports }: ProfilePageProps) {
   const [name, setName] = useState(userData.name);
   const [email, setEmail] = useState(userData.email);
   const [phone, setPhone] = useState(formatIndonesianPhoneDisplay(userData.phone));
@@ -284,10 +285,19 @@ export function ProfilePage({ userData, onUpdateProfile, onChangePassword, onDel
               </div>
 
               {/* Save Button */}
-              <div className="flex justify-end pt-4">
+              <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-sm"
+                  onClick={onBrowseOwnReports}
+                >
+                  <Search className="w-4 h-4 mr-2" />
+                  Telusuri Laporan Anda
+                </Button>
                 <Button
                   type="submit"
-                  className="bg-orange-600 hover:bg-orange-700 text-white"
+                  className="rounded-sm bg-orange-600 hover:bg-orange-700 text-white"
                 >
                   <Save className="w-4 h-4 mr-2" />
                   Simpan Perubahan

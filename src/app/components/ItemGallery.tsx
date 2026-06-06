@@ -36,12 +36,18 @@ interface ItemGalleryProps {
   items: any[];
   onUpdateStatus: (id: number, status: string) => void;
   canUpdateStatus?: boolean;
+  currentUserEmail?: string;
+  ownershipFilter: "all" | "mine";
+  onOwnershipFilterChange: (value: "all" | "mine") => void;
 }
 
 export function ItemGallery({
   items,
   onUpdateStatus,
   canUpdateStatus = false,
+  currentUserEmail = "",
+  ownershipFilter,
+  onOwnershipFilterChange,
 }: ItemGalleryProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -79,12 +85,17 @@ export function ItemGallery({
       typeFilter === "all" || item.type === typeFilter;
     const matchesStatus =
       statusFilter === "all" || item.status === statusFilter;
+    const matchesOwnership =
+      ownershipFilter === "all" ||
+      (currentUserEmail &&
+        item.reporter_email === currentUserEmail);
 
     return (
       matchesSearch &&
       matchesCategory &&
       matchesType &&
-      matchesStatus
+      matchesStatus &&
+      matchesOwnership
     );
   });
 
@@ -93,13 +104,15 @@ export function ItemGallery({
     setCategoryFilter("all");
     setTypeFilter("all");
     setStatusFilter("all");
+    onOwnershipFilterChange("all");
   };
 
   const hasActiveFilters =
     searchTerm ||
     categoryFilter !== "all" ||
     typeFilter !== "all" ||
-    statusFilter !== "all";
+    statusFilter !== "all" ||
+    ownershipFilter !== "all";
 
   const handleStatusUpdate = (
     id: number,
@@ -136,7 +149,7 @@ export function ItemGallery({
             </div>
 
             {/* Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Select
                 value={categoryFilter}
                 onValueChange={setCategoryFilter}
@@ -198,6 +211,25 @@ export function ItemGallery({
                   </SelectItem>
                   <SelectItem value="claimed">
                     Sudah Diambil
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={ownershipFilter}
+                onValueChange={(value) =>
+                  onOwnershipFilterChange(value as "all" | "mine")
+                }
+              >
+                <SelectTrigger className="rounded-sm">
+                  <SelectValue placeholder="Kepemilikan" />
+                </SelectTrigger>
+                <SelectContent className="rounded-sm">
+                  <SelectItem value="all">
+                    Semua Laporan
+                  </SelectItem>
+                  <SelectItem value="mine">
+                    Laporan Anda
                   </SelectItem>
                 </SelectContent>
               </Select>

@@ -210,6 +210,7 @@ export default function App() {
   const [userData, setUserData] = useState<UserData>(emptyUserData);
   const [authToastMessage, setAuthToastMessage] = useState('');
   const [showAuthToast, setShowAuthToast] = useState(false);
+  const [galleryOwnershipFilter, setGalleryOwnershipFilter] = useState<"all" | "mine">("all");
   const isHistoryNavigationRef = useRef(false);
 
   const alertMissingSupabaseConfig = () => {
@@ -467,6 +468,18 @@ export default function App() {
     setCurrentView('dashboard');
   };
 
+  const navigateToView = (view: string) => {
+    if (view === 'gallery') {
+      setGalleryOwnershipFilter('all');
+    }
+    setCurrentView(view);
+  };
+
+  const openOwnReportsGallery = () => {
+    setGalleryOwnershipFilter('mine');
+    setCurrentView('gallery');
+  };
+
   const handleUpdateProfile = async (data: { email: string; name: string; avatar?: string; phone: string; address: string }): Promise<boolean> => {
     if (!supabase) {
       alertMissingSupabaseConfig();
@@ -718,7 +731,7 @@ export default function App() {
                     <Button
                       key={item.id}
                       variant={currentView === item.id ? "default" : "ghost"}
-                      onClick={() => setCurrentView(item.id)}
+                      onClick={() => navigateToView(item.id)}
                       className="relative text-xs"
                     >
                       <Icon className="w-3 h-3 mr-1" />
@@ -750,7 +763,7 @@ export default function App() {
                     name={userData.name}
                     avatar={userData.avatar}
                     onLogout={handleLogout}
-                    onProfileClick={() => setCurrentView('profile')}
+                    onProfileClick={() => navigateToView('profile')}
                   />
                 </div>
               )}
@@ -779,7 +792,7 @@ export default function App() {
                     key={item.id}
                     variant={currentView === item.id ? "default" : "ghost"}
                     onClick={() => {
-                      setCurrentView(item.id);
+                      navigateToView(item.id);
                       setMobileMenuOpen(false);
                     }}
                     className="w-full justify-start relative text-xs"
@@ -833,7 +846,7 @@ export default function App() {
                     <Button
                       variant="ghost"
                       onClick={() => {
-                        setCurrentView('profile');
+                        navigateToView('profile');
                         setMobileMenuOpen(false);
                       }}
                       className="w-full justify-start text-xs"
@@ -880,7 +893,7 @@ export default function App() {
         {currentView === 'dashboard' && (
           <Dashboard
             items={items}
-            onNavigate={setCurrentView}
+            onNavigate={navigateToView}
             onUpdateStatus={updateItemStatus}
             canUpdateStatus={isLoggedIn}
           />
@@ -923,6 +936,9 @@ export default function App() {
             items={items}
             onUpdateStatus={updateItemStatus}
             canUpdateStatus={isLoggedIn}
+            currentUserEmail={userData.email}
+            ownershipFilter={galleryOwnershipFilter}
+            onOwnershipFilterChange={setGalleryOwnershipFilter}
           />
         )}
 
@@ -1004,6 +1020,7 @@ export default function App() {
             onUpdateProfile={handleUpdateProfile}
             onChangePassword={handleChangePassword}
             onDeleteAccount={handleDeleteAccount}
+            onBrowseOwnReports={openOwnReportsGallery}
           />
         )}
       </main>
