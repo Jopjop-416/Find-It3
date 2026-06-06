@@ -107,7 +107,7 @@ export function NewsCarousel({ onNavigate }: NewsCarouselProps) {
     <div className="space-y-4">
       {/* Carousel */}
       <div
-        className="relative h-[280px] md:h-[350px] rounded-lg overflow-hidden group"
+        className="relative h-[280px] md:h-[350px] rounded-sm overflow-hidden group"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
       >
@@ -165,14 +165,14 @@ export function NewsCarousel({ onNavigate }: NewsCarouselProps) {
         {/* Navigation Buttons */}
         <button
           onClick={prevSlide}
-          className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 bg-black/50 hover:bg-white/20 backdrop-blur-sm text-white rounded-full flex items-center justify-center transition-all z-10 shadow-lg"
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-white/90 opacity-0 transition-all duration-200 group-hover:opacity-100 hover:text-white z-10"
           aria-label="Previous slide"
         >
           <ChevronLeft className="w-6 h-6" />
         </button>
         <button
           onClick={nextSlide}
-          className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 bg-black/50 hover:bg-white/20 backdrop-blur-sm text-white rounded-full flex items-center justify-center transition-all z-10 shadow-lg"
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-white/90 opacity-0 transition-all duration-200 group-hover:opacity-100 hover:text-white z-10"
           aria-label="Next slide"
         >
           <ChevronRight className="w-6 h-6" />
@@ -193,7 +193,7 @@ export function NewsCarousel({ onNavigate }: NewsCarouselProps) {
       {/* Login CTA Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
         <Card
-          className="overflow-hidden relative h-80 rounded-md cursor-pointer group"
+          className="overflow-hidden relative h-80 rounded-sm cursor-pointer group"
           onClick={() => onNavigate?.("login")}
         >
           <img
@@ -231,7 +231,7 @@ export function NewsCarousel({ onNavigate }: NewsCarouselProps) {
         </Card>
 
         <Card
-          className="overflow-hidden relative h-80 rounded-md cursor-pointer group"
+          className="overflow-hidden relative h-80 rounded-sm cursor-pointer group"
           onClick={() => onNavigate?.("register")}
         >
           <img

@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Toast } from './ui/toast';
 import { Bell, CheckCircle, AlertCircle, Info, Trash2 } from 'lucide-react';
-import krImage from '../../assets/kr.png';
+import krImage from '../../assets/kr2.png';
 
 interface Notification {
   id: number;
@@ -104,9 +104,9 @@ export function NotificationCenter({ notifications, onMarkAsRead, onDeleteNotifi
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Belum Dibaca</p>
-                <p className="text-2xl font-bold text-blue-600">{unreadNotifications.length}</p>
+                <p className="text-2xl font-bold text-green-600">{unreadNotifications.length}</p>
               </div>
-              <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+              <div className="w-3 h-3 bg-green-600 rounded-full"></div>
             </div>
           </CardContent>
         </Card>

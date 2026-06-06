@@ -15,6 +15,7 @@ import { LoginPage } from './components/LoginPage';
 import { RegisterPage } from './components/RegisterPage';
 import { UserAvatar } from './components/UserAvatar';
 import { ProfilePage } from './components/ProfilePage';
+import { Footer } from './components/Footer';
 import { Toast } from './components/ui/toast';
 import { ImageWithFallback } from './components/figma/ImageWithFallback';
 import foundItLogo from 'figma:asset/6e20ff767bc819bcb65b83fac10d99d01f0c4fd8.png';
@@ -822,7 +823,15 @@ export default function App() {
       )}
 
       {/* Main Content */}
-      <main className={currentView === 'login' || currentView === 'register' ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}>
+      <main
+        className={
+          currentView === 'login' || currentView === 'register'
+            ? ''
+            : currentView === 'dashboard'
+              ? 'max-w-7xl mx-auto px-4 pt-8 sm:px-6 lg:px-8'
+              : 'max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8'
+        }
+      >
         {!isSupabaseConfigured && currentView !== 'login' && currentView !== 'register' && (
           <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             Supabase belum dikonfigurasi di environment deployment. Data demo tetap ditampilkan, tetapi login dan penyimpanan laporan belum aktif.
@@ -959,6 +968,8 @@ export default function App() {
           />
         )}
       </main>
+
+      {currentView === 'dashboard' && <Footer />}
     </div>
   );
 }

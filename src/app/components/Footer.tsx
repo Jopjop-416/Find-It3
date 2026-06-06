@@ -4,7 +4,7 @@ import foundItLogo from "figma:asset/logo2.png";
 
 export function Footer() {
   return (
-    <footer className="bg-black text-white mt-6 w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
+    <footer className="mt-6 w-full bg-black text-white">
       <div className="max-w-7xl mx-auto px-6 py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:items-start">
           {/* About Section */}

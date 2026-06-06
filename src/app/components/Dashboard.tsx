@@ -25,7 +25,6 @@ import {
   DialogTrigger,
 } from "./ui/dialog";
 import { NewsCarousel } from "./NewsCarousel";
-import { Footer } from "./Footer";
 import {
   buildWhatsAppUrl,
   formatIndonesianPhoneDisplay,
@@ -441,7 +440,6 @@ export function Dashboard({
 
       {/* Quick Tips */}
       <NewsCarousel onNavigate={onNavigate} />
-      <Footer />
     </div>
   );
 }
