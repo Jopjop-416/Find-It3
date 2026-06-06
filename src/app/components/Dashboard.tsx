@@ -206,7 +206,7 @@ export function Dashboard({
           </h2>
           <button
             onClick={() => onNavigate?.("gallery")}
-            className="text-orange-600 hover:text-orange-700 font-medium text-sm hover:underline"
+            className="text-black hover:text-orange-700 font-medium text-sm hover:underline"
           >
             Lihat Lainnya
           </button>

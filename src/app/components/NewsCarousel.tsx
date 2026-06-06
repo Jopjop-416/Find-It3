@@ -1,14 +1,17 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
+  BookOpen,
   ChevronLeft,
   ChevronRight,
-  LogIn,
-  UserPlus,
+  CreditCard,
+  Gem,
+  KeyRound,
+  Package,
+  Shirt,
+  Smartphone,
+  Wallet,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { Card } from "./ui/card";
-import loginCover from "figma:asset/2412be6deea607ec6f8ef7e655eb41ff2289957e.png";
-import registerCover from "figma:asset/6e0302b470dfeaee72f713a6f32bccb12ae8fd58.png";
 import ik1 from "../../assets/ik1.png";
 import ik2 from "../../assets/ik2.png";
 import ik3 from "../../assets/ik3.png";
@@ -46,10 +49,24 @@ const newsData = [
   },
 ];
 
+const browseCategories = [
+  { id: "elektronik", label: "Elektronik", icon: Smartphone },
+  { id: "buku", label: "Buku", icon: BookOpen },
+  { id: "kartu-identitas", label: "Kartu Identitas", icon: CreditCard },
+  { id: "dompet", label: "Dompet", icon: Wallet },
+  { id: "tas", label: "Tas", icon: Package },
+  { id: "kunci", label: "Kunci", icon: KeyRound },
+  { id: "aksesori", label: "Aksesori", icon: Gem },
+  { id: "pakaian", label: "Pakaian", icon: Shirt },
+  { id: "lainnya", label: "Lainnya", icon: Package },
+] as const;
+
 export function NewsCarousel({ onNavigate }: NewsCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const categoryScrollerRef = useRef<HTMLDivElement | null>(null);
 
   const nextSlide = useCallback(() => {
     setDirection(1);
@@ -100,11 +117,18 @@ export function NewsCarousel({ onNavigate }: NewsCarouselProps) {
 
   const currentNews = newsData[currentIndex];
 
+  const scrollCategories = (direction: "left" | "right") => {
+    categoryScrollerRef.current?.scrollBy({
+      left: direction === "left" ? -320 : 320,
+      behavior: "smooth",
+    });
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-8">
       {/* Carousel */}
       <div
-        className="relative h-[260px] w-full rounded-sm overflow-hidden group sm:h-[320px] md:h-[400px] lg:h-[460px]"
+        className="relative h-[150px] w-full rounded-sm overflow-hidden group sm:h-[260px] md:h-[400px] lg:h-[460px]"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
       >
@@ -148,10 +172,10 @@ export function NewsCarousel({ onNavigate }: NewsCarouselProps) {
               >
                 {currentNews.title && (
                   <>
-                    <h2 className="text-xl md:text-4xl font-semibold text-white mb-4 leading-tight">
+                    <h2 className="mb-3 text-sm font-semibold leading-tight text-white sm:mb-4 sm:text-xl md:text-4xl">
                       {currentNews.title}
                     </h2>
-                    <p className="text-base md:text-md text-white/90 leading-relaxed max-w-2xl mx-auto">
+                    <p className="mx-auto max-w-2xl text-[10px] leading-relaxed text-white/90 sm:text-sm md:text-base">
                       {currentNews.description}
                     </p>
                   </>
@@ -189,84 +213,69 @@ export function NewsCarousel({ onNavigate }: NewsCarouselProps) {
         )}
       </div>
 
-      {/* Login CTA Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-        <Card
-          className="overflow-hidden relative h-80 rounded-sm cursor-pointer group"
-          onClick={() => onNavigate?.("login")}
-        >
-          <img
-            src={loginCover}
-            alt="Login Sekarang"
-            className="w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
-          />
-          <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors duration-300" />
-          <div className="absolute top-4 left-4">
-            <div className="bg-white rounded-sm p-2">
-              <LogIn className="w-5 h-5 text-black" />
-            </div>
+      <section className="space-y-6">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-semibold mb-2 text-black">
+              Browse By Category
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Cari barang anda berdasarkan kategori yang anda tetapkan
+            </p>
           </div>
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/65 to-transparent p-6">
-            <div className="space-y-3">
-              <div>
-                <p className="text-white/80 text-xs mb-1">
-                  Login Sekarang
-                </p>
-                <h3 className="text-white font-semibold mb-2 text-lg">
-                  Login Terlebih Dahulu
-                </h3>
-                <p className="text-white/90 text-xs leading-relaxed max-w-md">
-                  Silahkan login terlebih dahulu untuk dapat
-                  melaporkan barang hilang atau menemukan barang
-                  yang hilang di lingkungan kampus. Gunakan akun
-                  email kampus Anda (@umm.ac.id).
-                </p>
-              </div>
-              <div className="inline-flex items-center mt-2 rounded-sm bg-white px-8 py-2 text-xs font-medium text-black transition-colors group-hover:bg-gray-200">
-                Login Sekarang
-              </div>
-            </div>
+          <div className="hidden items-center gap-3 sm:flex">
+            <button
+              type="button"
+              onClick={() => scrollCategories("left")}
+              className="flex h-10 w-10 items-center justify-center text-black transition-colors hover:text-gray-600"
+              aria-label="Geser kategori ke kiri"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollCategories("right")}
+              className="flex h-10 w-10 items-center justify-center text-black transition-colors hover:text-gray-600"
+              aria-label="Geser kategori ke kanan"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
           </div>
-        </Card>
+        </div>
 
-        <Card
-          className="overflow-hidden relative h-80 rounded-sm cursor-pointer group"
-          onClick={() => onNavigate?.("register")}
+        <div
+          ref={categoryScrollerRef}
+          className="flex snap-x snap-mandatory gap-5 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          <img
-            src={registerCover}
-            alt="Daftar Akun Baru"
-            className="w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
-          />
-          <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors duration-300" />
-          <div className="absolute top-4 left-4">
-            <div className="bg-white rounded-sm p-2">
-              <UserPlus className="w-5 h-5 text-black" />
-            </div>
-          </div>
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/65 to-transparent p-6">
-            <div className="space-y-3">
-              <div>
-                <p className="text-white/80 text-xs mb-1">
-                  Belum Punya Akun?
-                </p>
-                <h3 className="text-white font-semibold mb-2 text-lg">
-                  Daftar Akun Baru
-                </h3>
-                <p className="text-white/90 text-xs leading-relaxed max-w-md">
-                  Jangan khawatir! Daftarkan diri Anda segera
-                  untuk mulai menggunakan fitur lengkap kami
-                  dalam membantu sesama warga kampus menemukan
-                  barang mereka.
-                </p>
-              </div>
-              <div className="inline-flex items-center mt-2 rounded-sm bg-orange-500 px-8 py-2 text-xs font-medium text-white transition-colors group-hover:bg-orange-600">
-                Daftar Akun Baru
-              </div>
-            </div>
-          </div>
-        </Card>
-      </div>
+          {browseCategories.map((category) => {
+            const Icon = category.icon;
+            const isActive = activeCategory === category.id;
+
+            return (
+              <button
+                key={category.id}
+                type="button"
+                onClick={() =>
+                  setActiveCategory((currentCategory) =>
+                    currentCategory === category.id ? null : category.id,
+                  )
+                }
+                className={`flex min-w-[96px] snap-start flex-col items-center justify-center rounded-sm border px-3 py-4 text-center transition-colors sm:min-w-[140px] sm:px-5 sm:py-7 md:min-w-[160px] ${
+                  isActive
+                    ? "border-black bg-black text-white"
+                    : "border-gray-300 bg-white text-black hover:bg-gray-50"
+                }`}
+              >
+                <Icon className="mb-3 h-5 w-5 stroke-[1.75] sm:mb-4 sm:h-8 sm:w-8 md:h-9 md:w-9" />
+                <span className="text-[10px] font-medium leading-tight sm:text-sm md:text-base">
+                  {category.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+      </section>
     </div>
   );
 }
