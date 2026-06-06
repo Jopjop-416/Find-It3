@@ -21,11 +21,10 @@ import { Toast } from './components/ui/toast';
 import { ImageWithFallback } from './components/figma/ImageWithFallback';
 import foundItLogo from 'figma:asset/6e20ff767bc819bcb65b83fac10d99d01f0c4fd8.png';
 import {
+  type AppNotification,
   buildReporterIdentityUpdate,
   buildSubmissionSuccessNotification,
   buildItemInsertPayload,
-  getItemStatusLabel,
-  isAdminEmail,
   isMissingReporterIdentityColumnError,
   parseStoredJson,
   normalizeIndonesianPhone,
@@ -188,12 +187,14 @@ const mockNotifications = [
 ];
 
 const emptyUserData: UserData = {
+  id: '',
   email: '',
   name: '',
   avatar: '',
   phone: '',
   address: '',
   nim: '',
+  isAdmin: false,
 };
 
 type ProfileRow = {
@@ -204,13 +205,29 @@ type ProfileRow = {
   address: string | null;
   avatar_url: string | null;
   nim?: string | null;
+  is_admin?: boolean | null;
+};
+
+const isMissingProfileOptionalColumnError = (
+  error: { code?: string; message?: string | null } | null | undefined,
+): boolean => {
+  if (!error) {
+    return false;
+  }
+
+  return (
+    error.code === 'PGRST204'
+    && typeof error.message === 'string'
+    && (error.message.includes("'nim'") || error.message.includes("'is_admin'"))
+    && error.message.includes("'profiles'")
+  );
 };
 
 export default function App() {
   const [currentView, setCurrentView] = useState('dashboard');
   const [items, setItems] = useState<any[]>([]);
-  const [notifications, setNotifications] = useState(() => {
-    return parseStoredJson(localStorage.getItem('notifications'), mockNotifications);
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
+    return supabase ? [] : parseStoredJson(localStorage.getItem('notifications'), mockNotifications);
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -218,9 +235,7 @@ export default function App() {
   const [authToastMessage, setAuthToastMessage] = useState('');
   const [showAuthToast, setShowAuthToast] = useState(false);
   const [galleryOwnershipFilter, setGalleryOwnershipFilter] = useState<"all" | "mine">("all");
-  const [returnVerifications, setReturnVerifications] = useState<ItemReturnVerification[]>(() =>
-    parseStoredJson(localStorage.getItem('itemReturnVerifications'), []),
-  );
+  const [returnVerifications, setReturnVerifications] = useState<ItemReturnVerification[]>([]);
   const [selectedVerificationItemId, setSelectedVerificationItemId] = useState<number | null>(null);
   const [verificationReturnView, setVerificationReturnView] = useState('dashboard');
   const isHistoryNavigationRef = useRef(false);
@@ -237,12 +252,14 @@ export default function App() {
 
     return {
       ...authUserData,
+      id: authUser.id,
       email: profile?.email?.trim() || authUser.email || authUserData.email,
       name: profile?.username?.trim() || authUserData.name,
       avatar: profile?.avatar_url?.trim() || authUserData.avatar,
       phone: profile?.phone?.trim() || authUserData.phone,
       address: profile?.address?.trim() || authUserData.address,
       nim: profile?.nim?.trim() || authUserData.nim,
+      isAdmin: Boolean(profile?.is_admin),
     };
   };
 
@@ -251,18 +268,27 @@ export default function App() {
       return null;
     }
 
-    const { data, error } = await supabase
+    let profileResult = await supabase
       .from('profiles')
-      .select('id, username, email, phone, address, avatar_url, nim')
+      .select('id, username, email, phone, address, avatar_url, nim, is_admin')
       .eq('id', userId)
       .maybeSingle();
 
-    if (error) {
-      console.warn('Error fetching profile row:', error.message);
+    if (isMissingProfileOptionalColumnError(profileResult.error)) {
+      console.warn('Profiles table belum punya semua kolom opsional baru, memakai schema legacy.');
+      profileResult = await supabase
+        .from('profiles')
+        .select('id, username, email, phone, address, avatar_url')
+        .eq('id', userId)
+        .maybeSingle();
+    }
+
+    if (profileResult.error) {
+      console.warn('Error fetching profile row:', profileResult.error.message);
       return null;
     }
 
-    return data;
+    return profileResult.data;
   };
 
   // Mirror Supabase Auth into React state. Do not trust localStorage for auth.
@@ -338,12 +364,76 @@ export default function App() {
 
   // Save notifications to localStorage
   useEffect(() => {
-    localStorage.setItem('notifications', JSON.stringify(notifications));
+    if (!supabase) {
+      localStorage.setItem('notifications', JSON.stringify(notifications));
+    }
   }, [notifications]);
 
   useEffect(() => {
-    localStorage.setItem('itemReturnVerifications', JSON.stringify(returnVerifications));
-  }, [returnVerifications]);
+    const fetchUserScopedData = async () => {
+      if (!supabase) {
+        return;
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      const authUser = session?.user;
+
+      if (!authUser) {
+        setNotifications([]);
+        setReturnVerifications([]);
+        return;
+      }
+
+      const { data: notificationsData, error: notificationsError } = await supabase
+        .from('notifications')
+        .select('id, message, type, read, created_at, user_id')
+        .order('created_at', { ascending: false });
+
+      if (notificationsError) {
+        console.error('Error fetching notifications:', notificationsError);
+      } else if (notificationsData) {
+        setNotifications(
+          notificationsData.map((notification) => ({
+            id: Number(notification.id),
+            message: notification.message,
+            type: notification.type,
+            read: notification.read,
+            date: notification.created_at,
+            user_id: notification.user_id,
+            userEmail: userData.email,
+          })),
+        );
+      }
+
+      const { data: verificationData, error: verificationError } = await supabase
+        .from('item_return_verifications')
+        .select('id, item_id, reporter_id, reporter_name, reporter_email, reporter_phone, reporter_nim, handover_photo, verification_status, submitted_at, approved_at, approved_by')
+        .order('submitted_at', { ascending: false });
+
+      if (verificationError) {
+        console.error('Error fetching return verifications:', verificationError);
+      } else if (verificationData) {
+        setReturnVerifications(
+          verificationData.map((record) => ({
+            id: Number(record.id),
+            itemId: Number(record.item_id),
+            reporterId: record.reporter_id,
+            reporterName: record.reporter_name,
+            reporterEmail: record.reporter_email,
+            reporterPhone: record.reporter_phone,
+            reporterNim: record.reporter_nim,
+            handoverPhoto: record.handover_photo,
+            verificationStatus: record.verification_status,
+            submittedAt: record.submitted_at,
+            approvedAt: record.approved_at,
+            approvedBy: record.approved_by,
+          })),
+        );
+      }
+    };
+
+    void fetchUserScopedData();
+  }, [isLoggedIn, userData.id, userData.email]);
 
   useEffect(() => {
     const initialState = window.history.state;
@@ -422,7 +512,12 @@ export default function App() {
     
     // Add notification for successful submission
     const notification = buildSubmissionSuccessNotification(newItem.type, userData.email);
-    setNotifications((currentNotifications) => [notification, ...currentNotifications]);
+    await createNotification({
+      userId: userData.id,
+      userEmail: userData.email,
+      message: notification.message,
+      type: notification.type,
+    });
     return true;
   };
 
@@ -454,17 +549,103 @@ export default function App() {
     }
   };
 
+  const createNotification = async (payload: {
+    userId?: string;
+    userEmail: string;
+    message: string;
+    type: AppNotification['type'];
+  }) => {
+    const notificationDate = new Date().toISOString();
+
+    if (!supabase || !payload.userId) {
+      const notification: AppNotification = {
+        id: Date.now(),
+        message: payload.message,
+        type: payload.type,
+        date: notificationDate,
+        read: false,
+        userEmail: payload.userEmail,
+      };
+      setNotifications((currentNotifications) => [notification, ...currentNotifications]);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('notifications')
+      .insert([{
+        user_id: payload.userId,
+        message: payload.message,
+        type: payload.type,
+      }])
+      .select('id, message, type, read, created_at, user_id')
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error creating notification:', error);
+      return;
+    }
+
+    if (data) {
+      setNotifications((currentNotifications) => [
+        {
+          id: Number(data.id),
+          message: data.message,
+          type: data.type,
+          read: data.read,
+          date: data.created_at,
+          user_id: data.user_id,
+          userEmail: payload.userEmail,
+        },
+        ...currentNotifications,
+      ]);
+    }
+  };
+
   const markNotificationAsRead = (id: number) => {
-    setNotifications(notifications.map(notif =>
-      notif.id === id ? { ...notif, read: true } : notif
-    ));
+    if (!supabase) {
+      setNotifications(notifications.map(notif =>
+        notif.id === id ? { ...notif, read: true } : notif
+      ));
+      return;
+    }
+
+    void supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('id', id)
+      .then(({ error }) => {
+        if (error) {
+          console.error('Error marking notification as read:', error);
+          return;
+        }
+
+        setNotifications((currentNotifications) => currentNotifications.map((notif) =>
+          notif.id === id ? { ...notif, read: true } : notif
+        ));
+      });
   };
 
   const deleteNotification = (id: number) => {
-    setNotifications(notifications.filter(notif => notif.id !== id));
+    if (!supabase) {
+      setNotifications(notifications.filter(notif => notif.id !== id));
+      return;
+    }
+
+    void supabase
+      .from('notifications')
+      .delete()
+      .eq('id', id)
+      .then(({ error }) => {
+        if (error) {
+          console.error('Error deleting notification:', error);
+          return;
+        }
+
+        setNotifications((currentNotifications) => currentNotifications.filter((notif) => notif.id !== id));
+      });
   };
 
-  const currentUserNotifications = notifications.filter((n: any) => n.userEmail === userData.email);
+  const currentUserNotifications = notifications;
   const unreadCount = currentUserNotifications.filter((n: any) => !n.read).length;
 
   const handleLogout = async () => {
@@ -560,19 +741,37 @@ export default function App() {
       nim: data.nim.trim(),
     };
 
-    const { data: profileData, error: profileError } = await supabase
+    let profileResult = await supabase
       .from('profiles')
       .upsert(profilePayload, { onConflict: 'id' })
-      .select('id, username, email, phone, address, avatar_url, nim')
+      .select('id, username, email, phone, address, avatar_url, nim, is_admin')
       .maybeSingle();
 
-    if (profileError) {
-      alert('Profil Auth sudah diperbarui, tetapi penyimpanan tabel profiles gagal: ' + profileError.message);
+    if (isMissingProfileOptionalColumnError(profileResult.error)) {
+      console.warn('Profiles table belum punya semua kolom opsional baru, mencoba simpan schema legacy.');
+      const { nim: _nim, ...legacyProfilePayload } = profilePayload;
+      profileResult = await supabase
+        .from('profiles')
+        .upsert(legacyProfilePayload, { onConflict: 'id' })
+        .select('id, username, email, phone, address, avatar_url')
+        .maybeSingle();
+
+      if (profileResult.data) {
+        profileResult.data = {
+          ...profileResult.data,
+          nim: data.nim.trim(),
+          is_admin: false,
+        };
+      }
+    }
+
+    if (profileResult.error) {
+      alert('Profil Auth sudah diperbarui, tetapi penyimpanan tabel profiles gagal: ' + profileResult.error.message);
       return false;
     }
 
     const updatedUser = authData.user ?? user;
-    const updatedData = buildMergedUserData(updatedUser, profileData);
+    const updatedData = buildMergedUserData(updatedUser, profileResult.data);
     const reporterIdentityUpdate = buildReporterIdentityUpdate(userData.email, updatedData);
 
     let reporterSyncWarning = '';
@@ -609,15 +808,12 @@ export default function App() {
     }
 
     // Add notification for successful profile update
-    const notification = {
-      id: Date.now(),
+    await createNotification({
+      userId: updatedData.id,
+      userEmail: updatedData.email,
       message: 'Profile berhasil diperbarui',
       type: 'success',
-      date: new Date().toISOString().split('T')[0],
-      read: false,
-      userEmail: updatedData.email
-    };
-    setNotifications((currentNotifications) => [notification, ...currentNotifications]);
+    });
 
     return true;
   };
@@ -652,15 +848,12 @@ export default function App() {
     }
 
     // Add notification
-    const notification = {
-      id: Date.now(),
+    await createNotification({
+      userId: userData.id,
+      userEmail: userData.email,
       message: 'Password berhasil diubah',
       type: 'success',
-      date: new Date().toISOString().split('T')[0],
-      read: false,
-      userEmail: userData.email
-    };
-    setNotifications((currentNotifications) => [notification, ...currentNotifications]);
+    });
 
     return true;
   };
@@ -701,21 +894,11 @@ export default function App() {
     setCurrentView('dashboard');
 
     // Add notification
-    const notification = {
-      id: Date.now(),
-      message: 'Akun berhasil dihapus',
-      type: 'success',
-      date: new Date().toISOString().split('T')[0],
-      read: false,
-      userEmail: userData.email
-    };
-    setNotifications((currentNotifications) => [notification, ...currentNotifications]);
-
     return true;
   };
 
   const selectedVerificationItem = items.find((item) => item.id === selectedVerificationItemId) ?? null;
-  const isAdminUser = isAdminEmail(userData.email);
+  const isAdminUser = userData.isAdmin;
 
   const openReturnVerification = (itemId: number, fromView: string) => {
     setSelectedVerificationItemId(itemId);
@@ -725,36 +908,92 @@ export default function App() {
 
   const handleSubmitReturnVerification = async (payload: {
     itemId: number;
+    reporterId: string;
     reporterName: string;
     reporterEmail: string;
     reporterPhone: string;
     reporterNim: string;
     handoverPhoto: string;
   }): Promise<boolean> => {
-    const verificationRecord: ItemReturnVerification = {
-      id: Date.now(),
-      itemId: payload.itemId,
-      reporterName: payload.reporterName,
-      reporterEmail: payload.reporterEmail,
-      reporterPhone: payload.reporterPhone,
-      reporterNim: payload.reporterNim,
-      handoverPhoto: payload.handoverPhoto,
-      verificationStatus: 'pending',
-      submittedAt: new Date().toISOString(),
-    };
+    if (!supabase) {
+      const verificationRecord: ItemReturnVerification = {
+        id: Date.now(),
+        itemId: payload.itemId,
+        reporterId: payload.reporterId,
+        reporterName: payload.reporterName,
+        reporterEmail: payload.reporterEmail,
+        reporterPhone: payload.reporterPhone,
+        reporterNim: payload.reporterNim,
+        handoverPhoto: payload.handoverPhoto,
+        verificationStatus: 'pending',
+        submittedAt: new Date().toISOString(),
+      };
 
-    setReturnVerifications((currentRecords) => [verificationRecord, ...currentRecords.filter((record) => record.itemId !== payload.itemId)]);
-    setNotifications((currentNotifications) => [
-      {
-        id: Date.now() + 1,
+      setReturnVerifications((currentRecords) => [verificationRecord, ...currentRecords.filter((record) => record.itemId !== payload.itemId)]);
+      await createNotification({
+        userId: payload.reporterId,
+        userEmail: payload.reporterEmail,
         message: 'Verifikasi barang sudah ditemukan sedang diproses admin',
         type: 'verification',
-        date: new Date().toISOString().split('T')[0],
-        read: false,
-        userEmail: payload.reporterEmail,
-      },
-      ...currentNotifications,
-    ]);
+      });
+      setCurrentView(verificationReturnView);
+      setSelectedVerificationItemId(null);
+      return true;
+    }
+
+    const { data: insertedVerification, error: insertVerificationError } = await supabase
+      .from('item_return_verifications')
+      .upsert([{
+        item_id: payload.itemId,
+        reporter_id: payload.reporterId,
+        reporter_name: payload.reporterName,
+        reporter_email: payload.reporterEmail,
+        reporter_phone: payload.reporterPhone,
+        reporter_nim: payload.reporterNim,
+        handover_photo: payload.handoverPhoto,
+        verification_status: 'pending',
+      }], { onConflict: 'item_id' })
+      .select('id, item_id, reporter_id, reporter_name, reporter_email, reporter_phone, reporter_nim, handover_photo, verification_status, submitted_at, approved_at, approved_by')
+      .maybeSingle();
+
+    if (insertVerificationError) {
+      console.error('Error inserting return verification:', insertVerificationError);
+      alert('Terjadi kesalahan saat menyimpan verifikasi serah terima.');
+      return false;
+    }
+
+    const statusUpdated = await updateItemStatus(payload.itemId, 'pending_verification');
+    if (!statusUpdated) {
+      await supabase.from('item_return_verifications').delete().eq('item_id', payload.itemId);
+      return false;
+    }
+
+    if (insertedVerification) {
+      setReturnVerifications((currentRecords) => [
+        {
+          id: Number(insertedVerification.id),
+          itemId: Number(insertedVerification.item_id),
+          reporterId: insertedVerification.reporter_id,
+          reporterName: insertedVerification.reporter_name,
+          reporterEmail: insertedVerification.reporter_email,
+          reporterPhone: insertedVerification.reporter_phone,
+          reporterNim: insertedVerification.reporter_nim,
+          handoverPhoto: insertedVerification.handover_photo,
+          verificationStatus: insertedVerification.verification_status,
+          submittedAt: insertedVerification.submitted_at,
+          approvedAt: insertedVerification.approved_at,
+          approvedBy: insertedVerification.approved_by,
+        },
+        ...currentRecords.filter((record) => record.itemId !== payload.itemId),
+      ]);
+    }
+
+    await createNotification({
+      userId: payload.reporterId,
+      userEmail: payload.reporterEmail,
+      message: 'Verifikasi barang sudah ditemukan sedang diproses admin',
+      type: 'verification',
+    });
     setCurrentView(verificationReturnView);
     setSelectedVerificationItemId(null);
     return true;
@@ -767,18 +1006,20 @@ export default function App() {
     }
 
     const item = items.find((entry) => entry.id === itemId);
-    if (item?.reporter_email) {
-      setNotifications((currentNotifications) => [
-        {
-          id: Date.now() + 2,
-          message: 'Verifikasi barang Anda telah disetujui admin',
-          type: 'verification',
-          date: new Date().toISOString().split('T')[0],
-          read: false,
-          userEmail: item.reporter_email,
-        },
-        ...currentNotifications,
-      ]);
+    if (supabase) {
+      const { error } = await supabase
+        .from('item_return_verifications')
+        .update({
+          verification_status: 'approved',
+          approved_at: new Date().toISOString(),
+          approved_by: userData.id,
+        })
+        .eq('item_id', itemId);
+
+      if (error) {
+        console.error('Error approving return verification:', error);
+        alert('Status barang berhasil diperbarui, tetapi data verifikasi gagal disetujui.');
+      }
     }
 
     setReturnVerifications((currentRecords) =>
@@ -788,6 +1029,15 @@ export default function App() {
           : record,
       ),
     );
+
+    if (item?.reporter_email) {
+      await createNotification({
+        userId: item.reporter_id,
+        userEmail: item.reporter_email,
+        message: 'Verifikasi barang Anda telah disetujui admin',
+        type: 'verification',
+      });
+    }
     return true;
   };
 
@@ -996,6 +1246,7 @@ export default function App() {
             onUpdateStatus={updateItemStatus}
             canUpdateStatus={isLoggedIn}
             currentUserEmail={userData.email}
+            currentUserId={userData.id}
             isAdminUser={isAdminUser}
             onOpenReturnVerification={(itemId) => openReturnVerification(itemId, 'dashboard')}
             onApproveVerification={handleAdminApproveVerification}
@@ -1041,6 +1292,7 @@ export default function App() {
             onUpdateStatus={updateItemStatus}
             canUpdateStatus={isLoggedIn}
             currentUserEmail={userData.email}
+            currentUserId={userData.id}
             ownershipFilter={galleryOwnershipFilter}
             onOwnershipFilterChange={setGalleryOwnershipFilter}
             isAdminUser={isAdminUser}
@@ -1092,12 +1344,14 @@ export default function App() {
                 setUserData(buildMergedUserData(user));
               } else {
                 setUserData({
+                  id: '',
                   email: email || '',
                   name: userName,
                   avatar: userAvatar,
                   phone: '',
                   address: '',
                   nim: '',
+                  isAdmin: false,
                 });
               }
 

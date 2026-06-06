@@ -6,12 +6,14 @@ export type StoredUser = {
 };
 
 export type UserData = {
+  id: string;
   email: string;
   name: string;
   avatar: string;
   phone: string;
   address: string;
   nim: string;
+  isAdmin: boolean;
 };
 
 export type ReportFormData = {
@@ -27,17 +29,19 @@ export type ItemInsertPayload = ReportFormData & {
   type: string;
   status: string;
   date: string;
+  reporter_id: string;
   reporter_name: string;
   reporter_email: string;
 };
 
-export type LegacyItemInsertPayload = Omit<ItemInsertPayload, "reporter_name" | "reporter_email">;
+export type LegacyItemInsertPayload = Omit<ItemInsertPayload, "reporter_id" | "reporter_name" | "reporter_email">;
 export type AppNotification = {
   id: number;
   message: string;
   type: "match" | "verification" | "success" | "info";
   date: string;
   read: boolean;
+  user_id?: string;
   userEmail: string;
 };
 
@@ -52,6 +56,7 @@ export type ReporterIdentityUpdate = {
 export type ItemReturnVerification = {
   id: number;
   itemId: number;
+  reporterId: string;
   reporterName: string;
   reporterEmail: string;
   reporterPhone: string;
@@ -59,6 +64,8 @@ export type ItemReturnVerification = {
   handoverPhoto: string;
   verificationStatus: "pending" | "approved";
   submittedAt: string;
+  approvedAt?: string | null;
+  approvedBy?: string | null;
 };
 
 export function getEffectiveItemStatus(
@@ -97,20 +104,25 @@ export function parseStoredJson<T>(value: string | null, fallback: T): T {
 }
 
 type SupabaseAuthUserLike = {
+  id?: string;
   email?: string | null;
   user_metadata?: Record<string, unknown> | null;
+  app_metadata?: Record<string, unknown> | null;
 };
 
 export function buildUserDataFromAuthUser(user: SupabaseAuthUserLike | null | undefined): UserData {
   const email = user?.email ?? "";
   const metadata = user?.user_metadata ?? {};
+  const appMetadata = user?.app_metadata ?? {};
   const metadataName = metadata.name ?? metadata.full_name ?? metadata.username;
   const metadataAvatar = metadata.avatar_url ?? metadata.avatar;
   const metadataPhone = metadata.phone;
   const metadataAddress = metadata.address;
   const metadataNim = metadata.nim;
+  const metadataIsAdmin = appMetadata.is_admin;
 
   return {
+    id: user?.id ?? "",
     email,
     name:
       typeof metadataName === "string" && metadataName.trim()
@@ -120,6 +132,7 @@ export function buildUserDataFromAuthUser(user: SupabaseAuthUserLike | null | un
     phone: typeof metadataPhone === "string" ? metadataPhone : "",
     address: typeof metadataAddress === "string" ? metadataAddress : "",
     nim: typeof metadataNim === "string" ? metadataNim : "",
+    isAdmin: Boolean(metadataIsAdmin),
   };
 }
 
@@ -213,6 +226,7 @@ export function buildItemInsertPayload(
     ...item,
     status: item.type === "lost" ? "active" : "available",
     date: new Date().toISOString().split("T")[0],
+    reporter_id: userData.id,
     reporter_name: userData.name.trim() || "Pengguna Terdaftar",
     reporter_email: userData.email.trim(),
   };
@@ -235,7 +249,11 @@ export function isMissingReporterIdentityColumnError(
   return (
     error.code === "PGRST204"
     && typeof error.message === "string"
-    && (error.message.includes("reporter_name") || error.message.includes("reporter_email"))
+    && (
+      error.message.includes("reporter_id")
+      || error.message.includes("reporter_name")
+      || error.message.includes("reporter_email")
+    )
   );
 }
 
@@ -292,20 +310,12 @@ export function getItemStatusLabel(status: string): string {
 export function isReporterForItem(
   item: Record<string, unknown>,
   userEmail: string,
+  userId?: string,
 ): boolean {
   return (
-    typeof item.reporter_email === "string"
-    && item.reporter_email === userEmail
+    (typeof item.reporter_id === "string" && Boolean(userId) && item.reporter_id === userId)
+    || (typeof item.reporter_email === "string" && item.reporter_email === userEmail)
   );
-}
-
-export function isAdminEmail(email: string): boolean {
-  return new Set([
-    "admin@gmail.com",
-    "security@umm.ac.id",
-    "info@umm.ac.id",
-    "sekun@umm.ac.id",
-  ]).has(email.trim().toLowerCase());
 }
 
 export function shouldHideItemFromListings(

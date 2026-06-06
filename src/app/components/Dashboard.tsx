@@ -45,6 +45,7 @@ interface DashboardProps {
   onUpdateStatus: (id: number, status: string) => Promise<boolean>;
   canUpdateStatus?: boolean;
   currentUserEmail?: string;
+  currentUserId?: string;
   isAdminUser?: boolean;
   onOpenReturnVerification: (itemId: number) => void;
   onApproveVerification: (itemId: number) => Promise<boolean>;
@@ -57,6 +58,7 @@ export function Dashboard({
   onUpdateStatus,
   canUpdateStatus = false,
   currentUserEmail = "",
+  currentUserId = "",
   isAdminUser = false,
   onOpenReturnVerification,
   onApproveVerification,
@@ -429,7 +431,7 @@ export function Dashboard({
                     </Button>
 
                     {canUpdateStatus &&
-                      isReporterForItem(item, currentUserEmail) &&
+                      isReporterForItem(item, currentUserEmail, currentUserId) &&
                       effectiveStatus === "active" &&
                       item.type === "lost" && (
                         <Button
@@ -440,7 +442,7 @@ export function Dashboard({
                         </Button>
                       )}
                     {canUpdateStatus &&
-                      isReporterForItem(item, currentUserEmail) &&
+                      isReporterForItem(item, currentUserEmail, currentUserId) &&
                       effectiveStatus === "available" &&
                       item.type === "found" && (
                         <Button

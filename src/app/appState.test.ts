@@ -10,7 +10,6 @@ import {
   getReporterDisplayName,
   getItemStatusLabel,
   getEffectiveItemStatus,
-  isAdminEmail,
   isReporterForItem,
   isMissingReporterIdentityColumnError,
   isPasswordMatch,
@@ -69,12 +68,14 @@ describe("app state helpers", () => {
         },
       }),
     ).toEqual({
+      id: "",
       email: "rani@student.umm.ac.id",
       name: "Rani Permata",
       avatar: "data:image/jpeg;base64,abc",
       phone: "08123456789",
       address: "Jl. Tlogomas No. 246, Malang",
       nim: "202310370311111",
+      isAdmin: false,
     });
   });
 
@@ -85,11 +86,13 @@ describe("app state helpers", () => {
         user_metadata: {},
       }),
     ).toMatchObject({
+      id: "",
       email: "budi@student.umm.ac.id",
       name: "budi",
       phone: "",
       address: "",
       nim: "",
+      isAdmin: false,
     });
   });
 
@@ -154,18 +157,21 @@ describe("app state helpers", () => {
         type: "lost",
       },
       {
+        id: "user-1",
         email: "zaky@student.umm.ac.id",
         name: "zakyumm",
         avatar: "",
         phone: "08123456789",
         address: "Malang",
         nim: "202310370311001",
+        isAdmin: false,
       },
     );
 
     expect(payload).toMatchObject({
       title: "Mouse Logitech",
       status: "active",
+      reporter_id: "user-1",
       reporter_name: "zakyumm",
       reporter_email: "zaky@student.umm.ac.id",
     });
@@ -255,7 +261,13 @@ describe("app state helpers", () => {
         "kiki@student.umm.ac.id",
       ),
     ).toBe(true);
-    expect(isAdminEmail("security@umm.ac.id")).toBe(true);
+    expect(
+      isReporterForItem(
+        { reporter_id: "user-2", reporter_email: "lama@student.umm.ac.id" },
+        "baru@student.umm.ac.id",
+        "user-2",
+      ),
+    ).toBe(true);
     expect(
       shouldHideItemFromListings(
         { id: 7, status: "active" },

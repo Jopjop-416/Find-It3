@@ -42,6 +42,7 @@ interface ItemGalleryProps {
   onUpdateStatus: (id: number, status: string) => Promise<boolean>;
   canUpdateStatus?: boolean;
   currentUserEmail?: string;
+  currentUserId?: string;
   ownershipFilter: "all" | "mine";
   onOwnershipFilterChange: (value: "all" | "mine") => void;
   isAdminUser?: boolean;
@@ -55,6 +56,7 @@ export function ItemGallery({
   onUpdateStatus,
   canUpdateStatus = false,
   currentUserEmail = "",
+  currentUserId = "",
   ownershipFilter,
   onOwnershipFilterChange,
   isAdminUser = false,
@@ -466,7 +468,7 @@ export function ItemGallery({
                   </Button>
 
                   {canUpdateStatus &&
-                    isReporterForItem(item, currentUserEmail) &&
+                    isReporterForItem(item, currentUserEmail, currentUserId) &&
                     effectiveStatus === "active" &&
                     item.type === "lost" && (
                       <Button
@@ -478,7 +480,7 @@ export function ItemGallery({
                     )}
 
                   {canUpdateStatus &&
-                    isReporterForItem(item, currentUserEmail) &&
+                    isReporterForItem(item, currentUserEmail, currentUserId) &&
                     effectiveStatus === "available" &&
                     item.type === "found" && (
                       <Button

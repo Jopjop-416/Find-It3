@@ -16,6 +16,7 @@ import {
 interface ReturnVerificationFormProps {
   item: any;
   userData: {
+    id: string;
     email: string;
     name: string;
     phone: string;
@@ -24,6 +25,7 @@ interface ReturnVerificationFormProps {
   onBack: () => void;
   onSubmit: (payload: {
     itemId: number;
+    reporterId: string;
     reporterName: string;
     reporterEmail: string;
     reporterPhone: string;
@@ -103,6 +105,7 @@ export function ReturnVerificationForm({
     setIsSubmitting(true);
     const success = await onSubmit({
       itemId: item.id,
+      reporterId: userData.id,
       reporterName: userData.name,
       reporterEmail: userData.email,
       reporterPhone: normalizeIndonesianPhone(userData.phone),
