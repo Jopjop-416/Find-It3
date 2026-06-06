@@ -4,9 +4,11 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Checkbox } from "./ui/checkbox";
 import { Toast } from "./ui/toast";
+import { TurnstileWidget } from "./TurnstileWidget";
 import foundItLogo from "figma:asset/6e20ff767bc819bcb65b83fac10d99d01f0c4fd8.png";
 import ummCampusImage from "../../imports/umm1.png";
 import { supabase } from "../../lib/supabase";
+import { verifyTurnstileToken } from "../../lib/turnstile";
 
 interface LoginPageProps {
   onLoginSuccess?: (email?: string) => void | Promise<void>;
@@ -22,6 +24,8 @@ export function LoginPage({ onLoginSuccess, onSwitchToRegister, onForgotPassword
   const [toastMessage, setToastMessage] = useState("");
   const [showToast, setShowToast] = useState(false);
   const [toastVariant, setToastVariant] = useState<"success" | "error">("error");
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
 
   const showErrorToast = (message: string) => {
     setToastVariant("error");
@@ -52,6 +56,11 @@ export function LoginPage({ onLoginSuccess, onSwitchToRegister, onForgotPassword
       return;
     }
 
+    if (!turnstileToken) {
+      showErrorToast("Selesaikan CAPTCHA terlebih dahulu.");
+      return;
+    }
+
     if (!supabase) {
       showErrorToast("Supabase belum dikonfigurasi. Tambahkan environment variables terlebih dahulu.");
       return;
@@ -60,6 +69,12 @@ export function LoginPage({ onLoginSuccess, onSwitchToRegister, onForgotPassword
     setIsSubmitting(true);
 
     try {
+      const captchaResult = await verifyTurnstileToken(turnstileToken);
+      if (!captchaResult.success) {
+        showErrorToast(captchaResult.message);
+        return;
+      }
+
       const { error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
@@ -80,6 +95,8 @@ export function LoginPage({ onLoginSuccess, onSwitchToRegister, onForgotPassword
     } catch {
       showErrorToast("Login gagal karena koneksi atau konfigurasi Supabase bermasalah.");
     } finally {
+      setTurnstileToken(null);
+      setTurnstileResetSignal((current) => current + 1);
       setIsSubmitting(false);
     }
   };
@@ -174,6 +191,12 @@ export function LoginPage({ onLoginSuccess, onSwitchToRegister, onForgotPassword
               >
                 {isSubmitting ? "Signing in..." : "Sign in"}
               </Button>
+
+              <TurnstileWidget
+                siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                onTokenChange={setTurnstileToken}
+                resetSignal={turnstileResetSignal}
+              />
 
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">

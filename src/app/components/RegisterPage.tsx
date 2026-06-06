@@ -3,9 +3,11 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Toast } from "./ui/toast";
+import { TurnstileWidget } from "./TurnstileWidget";
 import foundItLogo from "figma:asset/6e20ff767bc819bcb65b83fac10d99d01f0c4fd8.png";
 import ummCampusImage from "../../imports/umm1.png";
 import { supabase } from "../../lib/supabase";
+import { verifyTurnstileToken } from "../../lib/turnstile";
 
 interface RegisterPageProps {
   onRegisterSuccess?: () => void;
@@ -24,6 +26,8 @@ export function RegisterPage({
   const [toastMessage, setToastMessage] = useState("");
   const [showToast, setShowToast] = useState(false);
   const [toastVariant, setToastVariant] = useState<"success" | "error">("error");
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
 
   const showErrorToast = (message: string) => {
     setToastVariant("error");
@@ -48,6 +52,11 @@ export function RegisterPage({
       return;
     }
 
+    if (!turnstileToken) {
+      showErrorToast("Selesaikan CAPTCHA terlebih dahulu.");
+      return;
+    }
+
     if (!supabase) {
       showErrorToast("Supabase belum dikonfigurasi. Tambahkan environment variables terlebih dahulu.");
       return;
@@ -56,6 +65,12 @@ export function RegisterPage({
     setIsSubmitting(true);
 
     try {
+      const captchaResult = await verifyTurnstileToken(turnstileToken);
+      if (!captchaResult.success) {
+        showErrorToast(captchaResult.message);
+        return;
+      }
+
       // Proses registrasi menggunakan Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email: trimmedEmail,
@@ -81,9 +96,11 @@ export function RegisterPage({
       setTimeout(() => {
         onRegisterSuccess?.();
       }, 1200);
-    } catch (error) {
+    } catch {
       showErrorToast("Registrasi gagal karena koneksi atau konfigurasi Supabase bermasalah.");
     } finally {
+      setTurnstileToken(null);
+      setTurnstileResetSignal((current) => current + 1);
       setIsSubmitting(false);
     }
   };
@@ -202,6 +219,12 @@ export function RegisterPage({
               >
                 {isSubmitting ? "Signing up..." : "Sign up"}
               </Button>
+
+              <TurnstileWidget
+                siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                onTokenChange={setTurnstileToken}
+                resetSignal={turnstileResetSignal}
+              />
 
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">

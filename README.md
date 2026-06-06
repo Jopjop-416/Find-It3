@@ -31,6 +31,7 @@ npm install
 ```env
 VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_TURNSTILE_SITE_KEY=your_turnstile_site_key
 ```
 
 3. Jalankan development server:
@@ -82,6 +83,18 @@ supabase functions deploy delete-account --verify-jwt
 ```
 
 Pastikan `SUPABASE_SERVICE_ROLE_KEY` tersedia di environment function Supabase.
+
+## Turnstile CAPTCHA
+
+Login dan register memakai Cloudflare Turnstile. Site key dipakai di frontend lewat `VITE_TURNSTILE_SITE_KEY`.
+
+Secret key tidak boleh disimpan di browser. Simpan `TURNSTILE_SECRET_KEY` di environment edge function Supabase, lalu deploy function:
+
+```bash
+supabase functions deploy turnstile-verify
+```
+
+Setelah itu, login dan register akan memverifikasi token CAPTCHA ke Cloudflare sebelum lanjut ke Supabase Auth.
 
 ## Catatan Sebelum Testing Publik
 

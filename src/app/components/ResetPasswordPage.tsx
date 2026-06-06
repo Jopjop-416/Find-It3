@@ -50,7 +50,7 @@ export function ResetPasswordPage({ onSuccess }: ResetPasswordPageProps) {
       const { error } = await supabase.auth.updateUser({ password });
 
       if (error) {
-        showErrorToast("Gagal mengganti password.");
+        showErrorToast("Gagal mengganti password. silahkan tunggu beberapa saat dan coba lagi.");
         return;
       }
 
