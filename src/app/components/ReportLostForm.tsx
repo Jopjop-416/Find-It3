@@ -18,7 +18,7 @@ import {
 } from '../appState';
 
 interface ReportLostFormProps {
-  onSubmit: (item: any) => void;
+  onSubmit: (item: any) => Promise<boolean>;
   onRequireLogin: () => void;
   onRequireProfileCompletion: () => void;
   isLoggedIn: boolean;
@@ -43,7 +43,8 @@ export function ReportLostForm({
     });
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showToast, setShowToast] = useState(false);
+  const [showLoginToast, setShowLoginToast] = useState(false);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(() => {
     const draft = parseStoredJson(localStorage.getItem('reportLostDraft'), {
@@ -107,7 +108,7 @@ export function ReportLostForm({
       // Save current form data to localStorage
       localStorage.setItem('reportLostDraft', JSON.stringify(formData));
       // Show toast notification
-      setShowToast(true);
+      setShowLoginToast(true);
       // Redirect to login after delay
       setTimeout(() => {
         onRequireLogin();
@@ -128,12 +129,17 @@ export function ReportLostForm({
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    onSubmit({
+    const success = await onSubmit({
       ...formData,
       type: 'lost',
       contact: normalizedUserPhone,
       image: imagePreview || 'https://images.unsplash.com/photo-1661353559006-402f30f9e2a1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsb3N0JTIwcGhvbmUlMjB3YWxsZXQlMjBrZXlzfGVufDF8fHx8MTc1ODY5MDA0Nnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral'
     });
+
+    if (!success) {
+      setIsSubmitting(false);
+      return;
+    }
 
     // Clear draft and reset form
     localStorage.removeItem('reportLostDraft');
@@ -146,6 +152,7 @@ export function ReportLostForm({
       image: ''
     });
     setImagePreview(null);
+    setShowSuccessToast(true);
     setIsSubmitting(false);
   };
 
@@ -178,8 +185,13 @@ export function ReportLostForm({
     <>
       <Toast
         message="Silakan login terlebih dahulu untuk melaporkan kehilangan barang"
-        isVisible={showToast}
-        onClose={() => setShowToast(false)}
+        isVisible={showLoginToast}
+        onClose={() => setShowLoginToast(false)}
+      />
+      <Toast
+        message="Laporan kehilangan berhasil disubmit"
+        isVisible={showSuccessToast}
+        onClose={() => setShowSuccessToast(false)}
       />
       <div className="max-w-2xl mx-auto">
         <Card className="rounded-sm">

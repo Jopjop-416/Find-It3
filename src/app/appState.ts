@@ -22,6 +22,32 @@ export type ReportFormData = {
   image?: string;
 };
 
+export type ItemInsertPayload = ReportFormData & {
+  type: string;
+  status: string;
+  date: string;
+  reporter_name: string;
+  reporter_email: string;
+};
+
+export type LegacyItemInsertPayload = Omit<ItemInsertPayload, "reporter_name" | "reporter_email">;
+export type AppNotification = {
+  id: number;
+  message: string;
+  type: "match" | "verification" | "success" | "info";
+  date: string;
+  read: boolean;
+  userEmail: string;
+};
+
+export type ReporterIdentityUpdate = {
+  matchEmails: string[];
+  payload: {
+    reporter_name: string;
+    reporter_email: string;
+  };
+};
+
 export function parseStoredJson<T>(value: string | null, fallback: T): T {
   if (!value) {
     return fallback;
@@ -115,6 +141,95 @@ export function buildWhatsAppUrl(phone: string, itemTitle: string): string {
   const normalized = normalizeIndonesianPhone(phone);
   const message = `Halo, saya dari website Found-It ingin menghubungi Anda terkait laporan barang "${itemTitle}".`;
   return `https://wa.me/${normalized}?text=${encodeURIComponent(message)}`;
+}
+
+export function getReporterDisplayName(item: Record<string, unknown>): string {
+  const candidateNames = [
+    item.name,
+    item.username,
+    item.user_name,
+    item.full_name,
+    item.reporterName,
+    item.reporter_name,
+  ];
+
+  for (const candidate of candidateNames) {
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+
+  const emailCandidate = item.email ?? item.user_email ?? item.reporterEmail ?? item.reporter_email;
+  if (typeof emailCandidate === "string" && emailCandidate.includes("@")) {
+    return emailCandidate.split("@")[0];
+  }
+
+  return "Pengguna Terdaftar";
+}
+
+export function buildItemInsertPayload(
+  item: ReportFormData & { type: string },
+  userData: UserData,
+): ItemInsertPayload {
+  return {
+    ...item,
+    status: item.type === "lost" ? "active" : "available",
+    date: new Date().toISOString().split("T")[0],
+    reporter_name: userData.name.trim() || "Pengguna Terdaftar",
+    reporter_email: userData.email.trim(),
+  };
+}
+
+export function stripReporterIdentityFromItemPayload(
+  item: ItemInsertPayload,
+): LegacyItemInsertPayload {
+  const { reporter_name: _reporterName, reporter_email: _reporterEmail, ...legacyItem } = item;
+  return legacyItem;
+}
+
+export function isMissingReporterIdentityColumnError(
+  error: { code?: string; message?: string | null } | null | undefined,
+): boolean {
+  if (!error) {
+    return false;
+  }
+
+  return (
+    error.code === "PGRST204"
+    && typeof error.message === "string"
+    && (error.message.includes("reporter_name") || error.message.includes("reporter_email"))
+  );
+}
+
+export function buildSubmissionSuccessNotification(
+  itemType: string,
+  userEmail: string,
+): AppNotification {
+  return {
+    id: Date.now(),
+    message: `Laporan ${itemType === "lost" ? "kehilangan" : "penemuan"} berhasil disubmit`,
+    type: "success",
+    date: new Date().toISOString().split("T")[0],
+    read: false,
+    userEmail,
+  };
+}
+
+export function buildReporterIdentityUpdate(
+  previousEmail: string,
+  nextUserData: Pick<UserData, "email" | "name">,
+): ReporterIdentityUpdate {
+  const matchEmails = Array.from(
+    new Set([previousEmail.trim(), nextUserData.email.trim()].filter(Boolean)),
+  );
+
+  return {
+    matchEmails,
+    payload: {
+      reporter_name: nextUserData.name.trim() || "Pengguna Terdaftar",
+      reporter_email: nextUserData.email.trim(),
+    },
+  };
 }
 
 export async function createPasswordHash(password: string): Promise<string> {

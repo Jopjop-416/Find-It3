@@ -1,12 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildReporterIdentityUpdate,
+  buildSubmissionSuccessNotification,
+  buildItemInsertPayload,
   buildUserDataFromAuthUser,
   buildWhatsAppUrl,
   createPasswordHash,
   formatIndonesianPhoneDisplay,
+  getReporterDisplayName,
+  isMissingReporterIdentityColumnError,
   isPasswordMatch,
   normalizeIndonesianPhone,
   parseStoredJson,
+  stripReporterIdentityFromItemPayload,
   validateImageFile,
   validateIndonesianPhone,
   validateReportData,
@@ -118,5 +124,99 @@ describe("app state helpers", () => {
     expect(buildWhatsAppUrl("08123456789", "Buku Bahasa Indonesia")).toBe(
       "https://wa.me/628123456789?text=Halo%2C%20saya%20dari%20website%20Found-It%20ingin%20menghubungi%20Anda%20terkait%20laporan%20barang%20%22Buku%20Bahasa%20Indonesia%22.",
     );
+  });
+
+  it("prefers the stored reporter name when rendering item detail", () => {
+    expect(
+      getReporterDisplayName({
+        reporter_name: "zakyumm",
+        reporter_email: "zaky@student.umm.ac.id",
+      }),
+    ).toBe("zakyumm");
+  });
+
+  it("builds an item insert payload with reporter identity from the profile", () => {
+    const payload = buildItemInsertPayload(
+      {
+        title: "Mouse Logitech",
+        category: "Elektronik",
+        description: "Mouse hitam",
+        location: "Lab Komputer",
+        contact: "628123456789",
+        type: "lost",
+      },
+      {
+        email: "zaky@student.umm.ac.id",
+        name: "zakyumm",
+        avatar: "",
+        phone: "08123456789",
+        address: "Malang",
+      },
+    );
+
+    expect(payload).toMatchObject({
+      title: "Mouse Logitech",
+      status: "active",
+      reporter_name: "zakyumm",
+      reporter_email: "zaky@student.umm.ac.id",
+    });
+
+    expect(stripReporterIdentityFromItemPayload(payload)).not.toHaveProperty("reporter_name");
+    expect(stripReporterIdentityFromItemPayload(payload)).not.toHaveProperty("reporter_email");
+  });
+
+  it("detects when the Supabase items schema is missing reporter identity columns", () => {
+    expect(
+      isMissingReporterIdentityColumnError({
+        code: "PGRST204",
+        message: "Could not find the 'reporter_email' column of 'items' in the schema cache",
+      }),
+    ).toBe(true);
+
+    expect(
+      isMissingReporterIdentityColumnError({
+        code: "23505",
+        message: "duplicate key value violates unique constraint",
+      }),
+    ).toBe(false);
+  });
+
+  it("builds a success notification for a submitted report", () => {
+    const notification = buildSubmissionSuccessNotification("lost", "zaky@student.umm.ac.id");
+
+    expect(notification).toMatchObject({
+      message: "Laporan kehilangan berhasil disubmit",
+      type: "success",
+      read: false,
+      userEmail: "zaky@student.umm.ac.id",
+    });
+  });
+
+  it("builds an item reporter sync update for profile changes", () => {
+    expect(
+      buildReporterIdentityUpdate("kiki@student.umm.ac.id", {
+        email: "kiki@student.umm.ac.id",
+        name: "Kiki Nur Jaim",
+      }),
+    ).toEqual({
+      matchEmails: ["kiki@student.umm.ac.id"],
+      payload: {
+        reporter_name: "Kiki Nur Jaim",
+        reporter_email: "kiki@student.umm.ac.id",
+      },
+    });
+
+    expect(
+      buildReporterIdentityUpdate("kiki@student.umm.ac.id", {
+        email: "kiki-baru@student.umm.ac.id",
+        name: "Kiki Nur Jaim",
+      }),
+    ).toEqual({
+      matchEmails: ["kiki@student.umm.ac.id", "kiki-baru@student.umm.ac.id"],
+      payload: {
+        reporter_name: "Kiki Nur Jaim",
+        reporter_email: "kiki-baru@student.umm.ac.id",
+      },
+    });
   });
 });

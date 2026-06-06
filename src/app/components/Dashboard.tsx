@@ -27,7 +27,7 @@ import {
 import { NewsCarousel } from "./NewsCarousel";
 import {
   buildWhatsAppUrl,
-  formatIndonesianPhoneDisplay,
+  getReporterDisplayName,
 } from "../appState";
 import heroImage from "figma:asset/706763380527f5c21ddaccdcfcc1a4edffb8b3f2.png";
 import laporHilangImg from "figma:asset/2412be6deea607ec6f8ef7e655eb41ff2289957e.png";
@@ -234,7 +234,7 @@ export function Dashboard({
                   </div>
 
                   <div
-                    className={`px-3 py-2 text-center text-xs font-semibold text-white ${
+                    className={`px-3 py-1 text-center text-xs font-semibold text-white ${
                       item.type === "lost"
                         ? "bg-[#AE0000]"
                         : "bg-black"
@@ -311,7 +311,7 @@ export function Dashboard({
                     </Badge>
                     <Badge
                       variant="secondary"
-                      className="rounded-[2px]"
+                      className="rounded-sm"
                     >
                       {item.category}
                     </Badge>
@@ -356,9 +356,7 @@ export function Dashboard({
                       <div className="flex items-center">
                         <User className="w-4 h-4 mr-2 text-muted-foreground" />
                         <span>
-                          {formatIndonesianPhoneDisplay(
-                            item.contact,
-                          )}
+                          {getReporterDisplayName(item)}
                         </span>
                       </div>
                     </div>

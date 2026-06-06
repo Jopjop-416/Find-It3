@@ -20,9 +20,14 @@ import { Toast } from './components/ui/toast';
 import { ImageWithFallback } from './components/figma/ImageWithFallback';
 import foundItLogo from 'figma:asset/6e20ff767bc819bcb65b83fac10d99d01f0c4fd8.png';
 import {
+  buildReporterIdentityUpdate,
+  buildSubmissionSuccessNotification,
+  buildItemInsertPayload,
+  isMissingReporterIdentityColumnError,
   normalizeIndonesianPhone,
   buildUserDataFromAuthUser,
   parseStoredJson,
+  stripReporterIdentityFromItemPayload,
   type UserData,
 } from './appState';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
@@ -353,10 +358,10 @@ export default function App() {
     window.history.pushState({ view: currentView }, '');
   }, [currentView]);
 
-  const addItem = async (newItem: any) => {
+  const addItem = async (newItem: any): Promise<boolean> => {
     if (!supabase) {
       alertMissingSupabaseConfig();
-      return;
+      return false;
     }
 
     const { data: { session } } = await supabase.auth.getSession();
@@ -364,37 +369,43 @@ export default function App() {
     if (!session?.user) {
       localStorage.setItem('redirectAfterLogin', currentView);
       setCurrentView('login');
-      return;
+      return false;
     }
 
-    const itemToInsert = {
-      ...newItem,
-      status: newItem.type === 'lost' ? 'active' : 'available',
-      date: new Date().toISOString().split('T')[0]
-    };
+    const itemToInsert = buildItemInsertPayload(newItem, userData);
 
-    const { data, error } = await supabase.from('items').insert([itemToInsert]).select();
-    
-    if (error) {
-      console.error('Error inserting item:', error);
+    let insertResult = await supabase.from('items').insert([itemToInsert]).select();
+
+    if (isMissingReporterIdentityColumnError(insertResult.error)) {
+      console.warn('Items table belum punya kolom reporter identity, mencoba payload legacy.');
+      insertResult = await supabase
+        .from('items')
+        .insert([stripReporterIdentityFromItemPayload(itemToInsert)])
+        .select();
+
+      if (insertResult.data && insertResult.data.length > 0) {
+        insertResult.data = insertResult.data.map((item) => ({
+          ...item,
+          reporter_name: itemToInsert.reporter_name,
+          reporter_email: itemToInsert.reporter_email,
+        }));
+      }
+    }
+
+    if (insertResult.error) {
+      console.error('Error inserting item:', insertResult.error);
       alert('Terjadi kesalahan saat menyimpan data ke database.');
-      return;
+      return false;
     }
     
-    if (data && data.length > 0) {
-      setItems((currentItems) => [data[0], ...currentItems]);
+    if (insertResult.data && insertResult.data.length > 0) {
+      setItems((currentItems) => [insertResult.data![0], ...currentItems]);
     }
     
     // Add notification for successful submission
-    const notification = {
-      id: Date.now(),
-      message: `Laporan ${newItem.type === 'lost' ? 'kehilangan' : 'penemuan'} berhasil disubmit`,
-      type: 'success',
-      date: new Date().toISOString().split('T')[0],
-      read: false,
-      userEmail: userData.email
-    };
+    const notification = buildSubmissionSuccessNotification(newItem.type, userData.email);
     setNotifications((currentNotifications) => [notification, ...currentNotifications]);
+    return true;
   };
 
   const updateItemStatus = async (id: number, status: string) => {
@@ -527,11 +538,39 @@ export default function App() {
 
     const updatedUser = authData.user ?? user;
     const updatedData = buildMergedUserData(updatedUser, profileData);
+    const reporterIdentityUpdate = buildReporterIdentityUpdate(userData.email, updatedData);
+
+    let reporterSyncWarning = '';
+    if (reporterIdentityUpdate.matchEmails.length > 0) {
+      const { error: itemReporterError } = await supabase
+        .from('items')
+        .update(reporterIdentityUpdate.payload)
+        .in('reporter_email', reporterIdentityUpdate.matchEmails);
+
+      if (itemReporterError && !isMissingReporterIdentityColumnError(itemReporterError)) {
+        reporterSyncWarning = itemReporterError.message;
+      }
+    }
 
     setUserData(updatedData);
+    setItems((currentItems) =>
+      currentItems.map((item) =>
+        reporterIdentityUpdate.matchEmails.includes(item.reporter_email)
+          ? {
+              ...item,
+              reporter_name: reporterIdentityUpdate.payload.reporter_name,
+              reporter_email: reporterIdentityUpdate.payload.reporter_email,
+            }
+          : item,
+      ),
+    );
 
     if (trimmedEmail && trimmedEmail !== userData.email) {
       alert('Jika konfirmasi email aktif, cek email baru Anda untuk menyelesaikan perubahan alamat email.');
+    }
+
+    if (reporterSyncWarning) {
+      alert(`Profil berhasil diperbarui, tetapi sinkronisasi nama pada laporan gagal: ${reporterSyncWarning}`);
     }
 
     // Add notification for successful profile update

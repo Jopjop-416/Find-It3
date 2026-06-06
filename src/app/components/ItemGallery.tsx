@@ -29,7 +29,7 @@ import {
 } from "./ui/dialog";
 import {
   buildWhatsAppUrl,
-  formatIndonesianPhoneDisplay,
+  getReporterDisplayName,
 } from "../appState";
 
 interface ItemGalleryProps {
@@ -248,7 +248,7 @@ export function ItemGallery({
                 </div>
 
                 <div
-                  className={`px-3 py-2 text-center text-xs font-semibold text-white ${
+                  className={`px-3 py-1 text-center text-xs font-semibold text-white ${
                     item.type === "lost"
                       ? "bg-[#AE0000]"
                       : "bg-black"
@@ -324,7 +324,7 @@ export function ItemGallery({
                       ? "Barang Hilang"
                       : "Barang Ditemukan"}
                   </Badge>
-                  <Badge variant="secondary" className="rounded-[2px]">
+                  <Badge variant="secondary" className="rounded-sm">
                     {item.category}
                   </Badge>
                   <Badge variant="outline" className="rounded-sm">
@@ -362,7 +362,7 @@ export function ItemGallery({
                     </div>
                     <div className="flex items-center">
                       <User className="w-4 h-4 mr-2 text-muted-foreground" />
-                      <span>{formatIndonesianPhoneDisplay(item.contact)}</span>
+                      <span>{getReporterDisplayName(item)}</span>
                     </div>
                   </div>
                 </div>
