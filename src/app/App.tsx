@@ -13,6 +13,8 @@ import { ContactInfo } from './components/ContactInfo';
 import { NotificationCenter } from './components/NotificationCenter';
 import { LoginPage } from './components/LoginPage';
 import { RegisterPage } from './components/RegisterPage';
+import { ForgotPasswordPage } from './components/ForgotPasswordPage';
+import { ResetPasswordPage } from './components/ResetPasswordPage';
 import { UserAvatar } from './components/UserAvatar';
 import { ProfilePage } from './components/ProfilePage';
 import { ReturnVerificationForm } from './components/ReturnVerificationForm';
@@ -300,6 +302,11 @@ export default function App() {
     }
 
     let isMounted = true;
+    const requestedView = new URLSearchParams(window.location.search).get('view');
+
+    if (requestedView === 'reset-password') {
+      setCurrentView('reset-password');
+    }
 
     const syncSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -321,7 +328,11 @@ export default function App() {
 
     syncSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setCurrentView('reset-password');
+      }
+
       if (!session?.user) {
         setIsLoggedIn(false);
         setUserData(emptyUserData);
@@ -437,8 +448,11 @@ export default function App() {
 
   useEffect(() => {
     const initialState = window.history.state;
+    const requestedView = new URLSearchParams(window.location.search).get('view');
+    const initialView = requestedView === 'reset-password' ? 'reset-password' : 'dashboard';
+
     if (!initialState?.view) {
-      window.history.replaceState({ view: 'dashboard' }, '');
+      window.history.replaceState({ view: initialView }, '');
     }
 
     const handlePopState = (event: PopStateEvent) => {
@@ -936,6 +950,8 @@ export default function App() {
         message: 'Verifikasi barang sudah ditemukan sedang diproses admin',
         type: 'verification',
       });
+      setAuthToastMessage('Permintaan verifikasi berhasil dikirim');
+      setShowAuthToast(true);
       setCurrentView(verificationReturnView);
       setSelectedVerificationItemId(null);
       return true;
@@ -994,6 +1010,8 @@ export default function App() {
       message: 'Verifikasi barang sudah ditemukan sedang diproses admin',
       type: 'verification',
     });
+    setAuthToastMessage('Permintaan verifikasi berhasil dikirim');
+    setShowAuthToast(true);
     setCurrentView(verificationReturnView);
     setSelectedVerificationItemId(null);
     return true;
@@ -1059,7 +1077,7 @@ export default function App() {
       />
 
       {/* Header - Hidden on login and register pages */}
-      {currentView !== 'login' && currentView !== 'register' && (
+      {currentView !== 'login' && currentView !== 'register' && currentView !== 'forgot-password' && currentView !== 'reset-password' && (
       <header className="bg-white border-b border-border sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -1226,14 +1244,14 @@ export default function App() {
       {/* Main Content */}
       <main
         className={
-          currentView === 'login' || currentView === 'register'
+          currentView === 'login' || currentView === 'register' || currentView === 'forgot-password' || currentView === 'reset-password'
             ? ''
             : currentView === 'dashboard'
               ? 'max-w-7xl mx-auto px-4 pt-8 sm:px-6 lg:px-8'
               : 'max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8'
         }
       >
-        {!isSupabaseConfigured && currentView !== 'login' && currentView !== 'register' && (
+        {!isSupabaseConfigured && currentView !== 'login' && currentView !== 'register' && currentView !== 'forgot-password' && currentView !== 'reset-password' && (
           <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             Supabase belum dikonfigurasi di environment deployment. Data demo tetap ditampilkan, tetapi login dan penyimpanan laporan belum aktif.
           </div>
@@ -1371,6 +1389,7 @@ export default function App() {
               }
             }}
             onSwitchToRegister={() => setCurrentView('register')}
+            onForgotPassword={() => setCurrentView('forgot-password')}
           />
         )}
 
@@ -1383,6 +1402,23 @@ export default function App() {
               setCurrentView('login');
             }}
             onSwitchToLogin={() => setCurrentView('login')}
+          />
+        )}
+
+        {currentView === 'forgot-password' && (
+          <ForgotPasswordPage
+            onBackToLogin={() => setCurrentView('login')}
+          />
+        )}
+
+        {currentView === 'reset-password' && (
+          <ResetPasswordPage
+            onSuccess={() => {
+              setAuthToastMessage('Password berhasil diganti! Silakan login dengan password baru Anda.');
+              setShowAuthToast(true);
+              window.history.replaceState({ view: 'login' }, '', window.location.pathname);
+              setCurrentView('login');
+            }}
           />
         )}
 

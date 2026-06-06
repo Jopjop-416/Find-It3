@@ -1,13 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
-import { CheckCircle, X } from "lucide-react";
+import { AlertCircle, CheckCircle, X } from "lucide-react";
 
 interface ToastProps {
   message: string;
   isVisible: boolean;
   onClose: () => void;
+  variant?: "success" | "error";
 }
 
-export function Toast({ message, isVisible, onClose }: ToastProps) {
+export function Toast({ message, isVisible, onClose, variant = "success" }: ToastProps) {
   const [shouldRender, setShouldRender] = useState(isVisible);
   const [isEntering, setIsEntering] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
@@ -69,9 +70,21 @@ export function Toast({ message, isVisible, onClose }: ToastProps) {
           : "translate-x-0 translate-y-0 opacity-100 scale-100"
       }`}
     >
-      <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-xl border border-gray-200 p-4 flex items-center space-x-3 min-w-[320px] max-w-[calc(100vw-3rem)]">
-        <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-        <p className="text-sm text-gray-900 flex-1">{message}</p>
+      <div
+        className={`backdrop-blur-sm rounded-xl shadow-xl border p-4 flex items-center space-x-3 min-w-[320px] max-w-[calc(100vw-3rem)] ${
+          variant === "error"
+            ? "bg-red-50/95 border-red-200"
+            : "bg-white/95 border-gray-200"
+        }`}
+      >
+        {variant === "error" ? (
+          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+        ) : (
+          <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+        )}
+        <p className={`text-sm flex-1 ${variant === "error" ? "text-red-900" : "text-gray-900"}`}>
+          {message}
+        </p>
         <button
           onClick={() => setIsLeaving(true)}
           className="text-gray-400 hover:text-gray-600 flex-shrink-0 transition-colors"

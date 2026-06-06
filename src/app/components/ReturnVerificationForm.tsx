@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { Toast } from "./ui/toast";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Upload, ShieldCheck, ArrowLeft } from "lucide-react";
 import {
@@ -44,7 +43,6 @@ export function ReturnVerificationForm({
   const [handoverPhoto, setHandoverPhoto] = useState<string>("");
   const [validationError, setValidationError] = useState("");
   const [nimProfileError, setNimProfileError] = useState("");
-  const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const nimInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -113,21 +111,11 @@ export function ReturnVerificationForm({
       handoverPhoto,
     });
 
-    if (success) {
-      setShowSuccessToast(true);
-    }
-
     setIsSubmitting(false);
   };
 
   return (
-    <>
-      <Toast
-        message="Permintaan verifikasi berhasil dikirim"
-        isVisible={showSuccessToast}
-        onClose={() => setShowSuccessToast(false)}
-      />
-      <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold">
@@ -266,6 +254,5 @@ export function ReturnVerificationForm({
           </CardContent>
         </Card>
       </div>
-    </>
   );
 }

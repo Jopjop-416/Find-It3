@@ -3,6 +3,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Checkbox } from "./ui/checkbox";
+import { Toast } from "./ui/toast";
 import foundItLogo from "figma:asset/6e20ff767bc819bcb65b83fac10d99d01f0c4fd8.png";
 import ummCampusImage from "../../imports/umm1.png";
 import { supabase } from "../../lib/supabase";
@@ -10,27 +11,50 @@ import { supabase } from "../../lib/supabase";
 interface LoginPageProps {
   onLoginSuccess?: (email?: string) => void | Promise<void>;
   onSwitchToRegister?: () => void;
+  onForgotPassword?: () => void;
 }
 
-export function LoginPage({ onLoginSuccess, onSwitchToRegister }: LoginPageProps) {
+export function LoginPage({ onLoginSuccess, onSwitchToRegister, onForgotPassword }: LoginPageProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState("");
+  const [toastMessage, setToastMessage] = useState("");
+  const [showToast, setShowToast] = useState(false);
+  const [toastVariant, setToastVariant] = useState<"success" | "error">("error");
+
+  const showErrorToast = (message: string) => {
+    setToastVariant("error");
+    setToastMessage(message);
+    setShowToast(true);
+  };
+
+  const getLoginErrorMessage = (errorMessage: string) => {
+    const normalizedMessage = errorMessage.toLowerCase();
+
+    if (normalizedMessage.includes("invalid login credentials")) {
+      return "Email atau password salah.";
+    }
+
+    if (normalizedMessage.includes("email not confirmed")) {
+      return "Email belum diverifikasi. Cek inbox Anda.";
+    }
+
+    return "Login gagal. Silakan coba lagi.";
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    setMessage("");
+    setShowToast(false);
 
     if (!email || !password) {
-      setMessage("Email dan password wajib diisi.");
+      showErrorToast("Email dan password wajib diisi.");
       return;
     }
 
     if (!supabase) {
-      setMessage("Supabase belum dikonfigurasi. Tambahkan environment variables terlebih dahulu.");
+      showErrorToast("Supabase belum dikonfigurasi. Tambahkan environment variables terlebih dahulu.");
       return;
     }
 
@@ -43,7 +67,7 @@ export function LoginPage({ onLoginSuccess, onSwitchToRegister }: LoginPageProps
       });
 
       if (error) {
-        setMessage(`Login gagal: ${error.message}`);
+        showErrorToast(getLoginErrorMessage(error.message));
         return;
       }
 
@@ -55,14 +79,21 @@ export function LoginPage({ onLoginSuccess, onSwitchToRegister }: LoginPageProps
 
       await onLoginSuccess?.(email.trim());
     } catch (error) {
-      setMessage("Login gagal karena koneksi atau konfigurasi Supabase bermasalah.");
+      showErrorToast("Login gagal karena koneksi atau konfigurasi Supabase bermasalah.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex">
+    <>
+      <Toast
+        message={toastMessage}
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+        variant={toastVariant}
+      />
+      <div className="min-h-screen flex">
       {/* Left Side - Image */}
       <div className="hidden lg:flex lg:w-1/2 relative">
         <img
@@ -90,12 +121,6 @@ export function LoginPage({ onLoginSuccess, onSwitchToRegister }: LoginPageProps
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            {message && (
-              <div className="rounded-sm border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-900">
-                {message}
-              </div>
-            )}
-
             {/* Email Field */}
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium text-gray-700">
@@ -145,6 +170,7 @@ export function LoginPage({ onLoginSuccess, onSwitchToRegister }: LoginPageProps
               </div>
               <button
                 type="button"
+                onClick={() => onForgotPassword?.()}
                 className="text-sm text-gray-600 hover:text-orange-600 transition-colors"
               >
                 Forgot password?{" "}
@@ -228,6 +254,7 @@ export function LoginPage({ onLoginSuccess, onSwitchToRegister }: LoginPageProps
           </form>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

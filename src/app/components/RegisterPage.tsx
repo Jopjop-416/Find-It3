@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { Toast } from "./ui/toast";
 import foundItLogo from "figma:asset/6e20ff767bc819bcb65b83fac10d99d01f0c4fd8.png";
 import ummCampusImage from "../../imports/umm1.png";
 import { supabase } from "../../lib/supabase";
@@ -20,27 +21,35 @@ export function RegisterPage({
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState("");
+  const [toastMessage, setToastMessage] = useState("");
+  const [showToast, setShowToast] = useState(false);
+  const [toastVariant, setToastVariant] = useState<"success" | "error">("error");
+
+  const showErrorToast = (message: string) => {
+    setToastVariant("error");
+    setToastMessage(message);
+    setShowToast(true);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const trimmedUsername = username.trim();
     const trimmedEmail = email.trim();
-    setMessage("");
+    setShowToast(false);
 
     if (!trimmedUsername || !trimmedEmail || !password || !confirmPassword) {
-      setMessage("Semua field wajib diisi.");
+      showErrorToast("Semua field wajib diisi.");
       return;
     }
 
     if (password !== confirmPassword) {
-      setMessage("Password tidak cocok.");
+      showErrorToast("Password tidak cocok.");
       return;
     }
 
     if (!supabase) {
-      setMessage("Supabase belum dikonfigurasi. Tambahkan environment variables terlebih dahulu.");
+      showErrorToast("Supabase belum dikonfigurasi. Tambahkan environment variables terlebih dahulu.");
       return;
     }
 
@@ -61,7 +70,7 @@ export function RegisterPage({
       });
 
       if (error) {
-        setMessage(`Gagal registrasi: ${error.message}`);
+        showErrorToast("Gagal registrasi. Silakan coba lagi.");
         return;
       }
 
@@ -73,14 +82,21 @@ export function RegisterPage({
         onRegisterSuccess?.();
       }, 1200);
     } catch (error) {
-      setMessage("Registrasi gagal karena koneksi atau konfigurasi Supabase bermasalah.");
+      showErrorToast("Registrasi gagal karena koneksi atau konfigurasi Supabase bermasalah.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex">
+    <>
+      <Toast
+        message={toastMessage}
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+        variant={toastVariant}
+      />
+      <div className="min-h-screen flex">
         <div className="hidden lg:flex lg:w-1/2 relative">
           <img
             src={ummCampusImage}
@@ -107,12 +123,6 @@ export function RegisterPage({
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {message && (
-                <div className="rounded-sm border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-900">
-                  {message}
-                </div>
-              )}
-
               <div className="space-y-1.5">
                 <Label
                   htmlFor="username"
@@ -261,6 +271,7 @@ export function RegisterPage({
             </form>
           </div>
         </div>
-    </div>
+      </div>
+    </>
   );
 }
