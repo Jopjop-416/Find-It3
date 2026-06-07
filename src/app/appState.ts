@@ -68,17 +68,23 @@ export type ItemReturnVerification = {
   approvedBy?: string | null;
 };
 
-export function getEffectiveItemStatus(
+export function getReturnVerificationForItem(
   item: Record<string, unknown>,
   returnVerifications: ItemReturnVerification[] = [],
-): string {
+): ItemReturnVerification | undefined {
   const itemId =
     typeof item.id === "number"
       ? item.id
       : Number(item.id);
-  const verificationRecord = returnVerifications.find(
-    (record) => record.itemId === itemId,
-  );
+
+  return returnVerifications.find((record) => record.itemId === itemId);
+}
+
+export function getEffectiveItemStatus(
+  item: Record<string, unknown>,
+  returnVerifications: ItemReturnVerification[] = [],
+): string {
+  const verificationRecord = getReturnVerificationForItem(item, returnVerifications);
 
   if (verificationRecord?.verificationStatus === "approved") {
     return "verified_returned";

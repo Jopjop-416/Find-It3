@@ -29,6 +29,7 @@ import {
   buildWhatsAppUrl,
   getEffectiveItemStatus,
   getItemStatusLabel,
+  getReturnVerificationForItem,
   getReporterDisplayName,
   isReporterForItem,
   shouldHideItemFromListings,
@@ -234,7 +235,7 @@ export function Dashboard({
 
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-[repeat(5,minmax(0,1fr))] gap-3">
           {visibleItems.map((item) => {
-            const verificationRecord = returnVerifications.find((record) => record.itemId === item.id);
+            const verificationRecord = getReturnVerificationForItem(item, returnVerifications);
             const effectiveStatus = getEffectiveItemStatus(item, returnVerifications);
             return (
             <Dialog key={item.id}>
@@ -474,7 +475,11 @@ export function Dashboard({
       </div>
 
       {/* Quick Tips */}
-      <NewsCarousel onNavigate={onNavigate} />
+      <NewsCarousel
+        items={visibleItems}
+        returnVerifications={returnVerifications}
+        onNavigate={onNavigate}
+      />
     </div>
   );
 }

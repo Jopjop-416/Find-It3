@@ -9,6 +9,7 @@ import {
   formatIndonesianPhoneDisplay,
   getReporterDisplayName,
   getItemStatusLabel,
+  getReturnVerificationForItem,
   getEffectiveItemStatus,
   isReporterForItem,
   isMissingReporterIdentityColumnError,
@@ -286,5 +287,23 @@ describe("app state helpers", () => {
         ],
       ),
     ).toBe(true);
+    expect(
+      getReturnVerificationForItem(
+        { id: "7" },
+        [
+          {
+            id: 100,
+            itemId: 7,
+            reporterName: "Kiki",
+            reporterEmail: "kiki@student.umm.ac.id",
+            reporterPhone: "628123456789",
+            reporterNim: "202310370311111",
+            handoverPhoto: "data:image/png;base64,abc",
+            verificationStatus: "approved",
+            submittedAt: "2026-06-06T10:00:00.000Z",
+          },
+        ],
+      )?.itemId,
+    ).toBe(7);
   });
 });
