@@ -16,4 +16,13 @@ describe("getReadableSupabaseAuthError", () => {
       "Gagal mengganti password.",
     );
   });
+
+  it("passes through a specific provider error message", () => {
+    expect(
+      getReadableSupabaseAuthError(
+        { message: "535 Authentication failed" },
+        "Gagal mengirim link reset password.",
+      ),
+    ).toBe("535 Authentication failed");
+  });
 });

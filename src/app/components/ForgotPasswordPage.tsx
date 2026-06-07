@@ -7,6 +7,7 @@ import foundItLogo from "figma:asset/6e20ff767bc819bcb65b83fac10d99d01f0c4fd8.pn
 import ummCampusImage from "../../imports/umm1.png";
 import { supabase } from "../../lib/supabase";
 import { buildPasswordRecoveryRedirectUrl } from "../../lib/authRecovery";
+import { getReadableSupabaseAuthError } from "../../lib/supabaseErrors";
 
 interface ForgotPasswordPageProps {
   onBackToLogin?: () => void;
@@ -51,7 +52,12 @@ export function ForgotPasswordPage({
       });
 
       if (error) {
-        showErrorToast("Gagal mengirim link reset password.");
+        showErrorToast(
+          getReadableSupabaseAuthError(
+            error,
+            "Gagal mengirim link reset password.",
+          ),
+        );
         return;
       }
 
