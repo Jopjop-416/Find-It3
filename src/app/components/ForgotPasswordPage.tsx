@@ -6,6 +6,7 @@ import { Toast } from "./ui/toast";
 import foundItLogo from "figma:asset/6e20ff767bc819bcb65b83fac10d99d01f0c4fd8.png";
 import ummCampusImage from "../../imports/umm1.png";
 import { supabase } from "../../lib/supabase";
+import { buildPasswordRecoveryRedirectUrl } from "../../lib/authRecovery";
 
 interface ForgotPasswordPageProps {
   onBackToLogin?: () => void;
@@ -44,7 +45,7 @@ export function ForgotPasswordPage({
     setIsSubmitting(true);
 
     try {
-      const redirectTo = `${window.location.origin}${window.location.pathname}?view=reset-password`;
+      const redirectTo = buildPasswordRecoveryRedirectUrl(window.location.href);
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
         redirectTo,
       });

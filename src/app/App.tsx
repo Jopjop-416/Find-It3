@@ -36,6 +36,7 @@ import {
   type ItemReturnVerification,
   type UserData,
 } from './appState';
+import { getPasswordRecoveryUrlState } from '../lib/authRecovery';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
 const mockItemsData = [
@@ -302,13 +303,29 @@ export default function App() {
     }
 
     let isMounted = true;
-    const requestedView = new URLSearchParams(window.location.search).get('view');
+    const passwordRecoveryState = getPasswordRecoveryUrlState(window.location.href);
 
-    if (requestedView === 'reset-password') {
+    if (passwordRecoveryState.shouldShowResetPassword) {
       setCurrentView('reset-password');
     }
 
     const syncSession = async () => {
+      if (passwordRecoveryState.recoveryCode) {
+        const { error } = await supabase.auth.exchangeCodeForSession(passwordRecoveryState.recoveryCode);
+        if (error) {
+          console.error('Error exchanging password recovery code:', error);
+          if (isMounted) {
+            setAuthToastMessage('Link reset password tidak valid atau sudah kedaluwarsa. Silakan minta link baru.');
+            setShowAuthToast(true);
+          }
+        }
+      }
+
+      if (window.location.pathname + window.location.search !== passwordRecoveryState.cleanedUrl) {
+        const nextHistoryView = passwordRecoveryState.shouldShowResetPassword ? 'reset-password' : (window.history.state?.view || 'dashboard');
+        window.history.replaceState({ view: nextHistoryView }, '', passwordRecoveryState.cleanedUrl);
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!isMounted) return;
 
@@ -330,6 +347,7 @@ export default function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
+        window.history.replaceState({ view: 'reset-password' }, '', passwordRecoveryState.cleanedUrl);
         setCurrentView('reset-password');
       }
 
