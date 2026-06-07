@@ -321,13 +321,13 @@ export default function App() {
         }
       }
 
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!isMounted) return;
+
       if (window.location.pathname + window.location.search !== passwordRecoveryState.cleanedUrl) {
         const nextHistoryView = passwordRecoveryState.shouldShowResetPassword ? 'reset-password' : (window.history.state?.view || 'dashboard');
         window.history.replaceState({ view: nextHistoryView }, '', passwordRecoveryState.cleanedUrl);
       }
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!isMounted) return;
 
       if (!session?.user) {
         setIsLoggedIn(false);

@@ -6,6 +6,7 @@ import { Toast } from "./ui/toast";
 import foundItLogo from "figma:asset/6e20ff767bc819bcb65b83fac10d99d01f0c4fd8.png";
 import ummCampusImage from "../../imports/umm1.png";
 import { supabase } from "../../lib/supabase";
+import { getReadableSupabaseAuthError } from "../../lib/supabaseErrors";
 
 interface ResetPasswordPageProps {
   onSuccess?: () => void;
@@ -47,16 +48,29 @@ export function ResetPasswordPage({ onSuccess }: ResetPasswordPageProps) {
     setIsSubmitting(true);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session?.user) {
+        showErrorToast("Link reset password tidak valid atau sesi recovery tidak aktif. Silakan minta link baru.");
+        return;
+      }
+
       const { error } = await supabase.auth.updateUser({ password });
 
       if (error) {
-        showErrorToast("Gagal mengganti password. silahkan tunggu beberapa saat dan coba lagi.");
+        showErrorToast(
+          getReadableSupabaseAuthError(
+            error,
+            "Gagal mengganti password. Silakan tunggu beberapa saat dan coba lagi.",
+          ),
+        );
         return;
       }
 
       await supabase.auth.signOut();
       onSuccess?.();
-    } catch {
+    } catch (error) {
+      console.error("Unexpected error while resetting password:", error);
       showErrorToast("Gagal mengganti password.");
     } finally {
       setIsSubmitting(false);
