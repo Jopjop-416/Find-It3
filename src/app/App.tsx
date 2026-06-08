@@ -999,7 +999,7 @@ export default function App() {
       return;
     }
 
-    openMarkFoundReport(itemId, fromView);
+    openReturnVerification(itemId, fromView, 'verification');
   };
 
   const handleResolvedLostReportSuccess = () => {

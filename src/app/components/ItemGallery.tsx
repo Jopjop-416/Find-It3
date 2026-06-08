@@ -525,7 +525,7 @@ export function ItemGallery({
                       ? [
                           {
                             key: "verify-found",
-                            label: "Tandai Sudah Ditemukan",
+                            label: "Verifikasi Barang Sudah Ditemukan",
                             onClick: () => onOpenReturnVerification(item.id),
                           },
                         ]

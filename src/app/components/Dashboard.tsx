@@ -424,9 +424,9 @@ export function Dashboard({
                       effectiveStatus === "active" &&
                       item.type === "lost"
                         ? [
-                            {
-                              key: "verify-found",
-                              label: "Tandai Sudah Ditemukan",
+                              {
+                                key: "verify-found",
+                              label: "Verifikasi Barang Sudah Ditemukan",
                               onClick: () => onOpenReturnVerification(item.id),
                             },
                           ]

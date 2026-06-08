@@ -112,7 +112,7 @@ export function MatchResultsPage({
                         ? [
                             {
                               key: `verify-${match.matchId}`,
-                              label: "Tandai Sudah Ditemukan",
+                              label: "Verifikasi Barang Sudah Ditemukan",
                               onClick: () => onOpenReturnVerification(Number(myItem.id)),
                             },
                           ]
