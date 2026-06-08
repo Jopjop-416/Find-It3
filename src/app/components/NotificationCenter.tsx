@@ -13,15 +13,21 @@ interface Notification {
   date: string;
   read: boolean;
   userEmail?: string;
+  metadata?: {
+    targetView?: string;
+    matchId?: number;
+    itemId?: number;
+  };
 }
 
 interface NotificationCenterProps {
   notifications: Notification[];
   onMarkAsRead: (id: number) => void;
   onDeleteNotification: (id: number) => void;
+  onOpenNotification: (notification: Notification) => void;
 }
 
-export function NotificationCenter({ notifications, onMarkAsRead, onDeleteNotification }: NotificationCenterProps) {
+export function NotificationCenter({ notifications, onMarkAsRead, onDeleteNotification, onOpenNotification }: NotificationCenterProps) {
   const [showToast, setShowToast] = useState(false);
   const unreadNotifications = notifications.filter(n => !n.read);
   const readNotifications = notifications.filter(n => n.read);
@@ -129,7 +135,7 @@ export function NotificationCenter({ notifications, onMarkAsRead, onDeleteNotifi
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Notifikasi Baru</h2>
           {unreadNotifications.map((notification) => (
-            <Card key={notification.id} className="rounded-sm border-l-4 border-green-600">
+            <Card key={notification.id} className="rounded-sm border border-green-600">
               <CardContent className="p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex min-w-0 flex-1 items-start gap-3">
@@ -138,7 +144,7 @@ export function NotificationCenter({ notifications, onMarkAsRead, onDeleteNotifi
                     </div>
                     <div className="flex-1 space-y-2 min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant={getNotificationBadgeVariant(notification.type)} className="rounded-sm">
+                        <Badge variant={getNotificationBadgeVariant(notification.type)} className="rounded-xs">
                           {getNotificationLabel(notification.type)}
                         </Badge>
                         <span className="text-xs text-muted-foreground">
@@ -149,11 +155,21 @@ export function NotificationCenter({ notifications, onMarkAsRead, onDeleteNotifi
                     </div>
                   </div>
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2">
+                    {notification.type === 'match' && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => onOpenNotification(notification)}
+                        className="w-full rounded-sm bg-black text-xs text-white hover:bg-gray-800 sm:w-auto"
+                      >
+                        Lihat Kecocokan
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => onMarkAsRead(notification.id)}
-                      className="w-full rounded-sm sm:w-auto"
+                      className="w-full text-xs rounded-sm sm:w-auto"
                     >
                       Tandai Dibaca
                     </Button>

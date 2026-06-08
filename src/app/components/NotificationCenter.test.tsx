@@ -16,10 +16,15 @@ describe("NotificationCenter", () => {
             date: "2024-09-23T00:00:00.000Z",
             read: false,
             userEmail: "user@example.com",
+            metadata: {
+              targetView: "match-results",
+              matchId: 42,
+            },
           },
         ]}
         onMarkAsRead={vi.fn()}
         onDeleteNotification={vi.fn()}
+        onOpenNotification={vi.fn()}
       />,
     );
 
@@ -30,5 +35,6 @@ describe("NotificationCenter", () => {
     expect(markup).toContain("self-end");
     expect(markup).toContain("sm:self-auto");
     expect(markup).toContain("flex flex-wrap items-center gap-2");
+    expect(markup).toContain("Lihat Kecocokan");
   });
 });

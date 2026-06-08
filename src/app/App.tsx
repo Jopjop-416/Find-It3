@@ -11,6 +11,7 @@ import { ReportFoundForm } from './components/ReportFoundForm';
 import { ItemGallery } from './components/ItemGallery';
 import { ContactInfo } from './components/ContactInfo';
 import { NotificationCenter } from './components/NotificationCenter';
+import { MatchResultsPage } from './components/MatchResultsPage';
 import { LoginPage } from './components/LoginPage';
 import { RegisterPage } from './components/RegisterPage';
 import { ForgotPasswordPage } from './components/ForgotPasswordPage';
@@ -24,9 +25,13 @@ import { ImageWithFallback } from './components/figma/ImageWithFallback';
 import foundItLogo from 'figma:asset/6e20ff767bc819bcb65b83fac10d99d01f0c4fd8.png';
 import {
   type AppNotification,
+  buildAutoMatchNotificationMessage,
+  buildDerivedMatchNotifications,
   buildReporterIdentityUpdate,
   buildSubmissionSuccessNotification,
+  buildUserMatchSummaries,
   buildItemInsertPayload,
+  findAutoMatchCandidates,
   isMissingReporterIdentityColumnError,
   parseStoredJson,
   normalizeIndonesianPhone,
@@ -239,6 +244,8 @@ export default function App() {
   const [showAuthToast, setShowAuthToast] = useState(false);
   const [galleryOwnershipFilter, setGalleryOwnershipFilter] = useState<"all" | "mine">("all");
   const [returnVerifications, setReturnVerifications] = useState<ItemReturnVerification[]>([]);
+  const [itemMatches, setItemMatches] = useState<any[]>([]);
+  const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [selectedVerificationItemId, setSelectedVerificationItemId] = useState<number | null>(null);
   const [verificationReturnView, setVerificationReturnView] = useState('dashboard');
   const isHistoryNavigationRef = useRef(false);
@@ -409,20 +416,32 @@ export default function App() {
 
       if (!authUser) {
         setNotifications([]);
+        setItemMatches([]);
         setReturnVerifications([]);
         return;
       }
 
-      const { data: notificationsData, error: notificationsError } = await supabase
+      let notificationsResult = await supabase
         .from('notifications')
-        .select('id, message, type, read, created_at, user_id')
+        .select('id, message, type, read, created_at, user_id, metadata')
         .order('created_at', { ascending: false });
 
-      if (notificationsError) {
-        console.error('Error fetching notifications:', notificationsError);
-      } else if (notificationsData) {
+      if (
+        notificationsResult.error
+        && notificationsResult.error.code === 'PGRST204'
+        && notificationsResult.error.message?.includes("'metadata'")
+      ) {
+        notificationsResult = await supabase
+          .from('notifications')
+          .select('id, message, type, read, created_at, user_id')
+          .order('created_at', { ascending: false });
+      }
+
+      if (notificationsResult.error) {
+        console.error('Error fetching notifications:', notificationsResult.error);
+      } else if (notificationsResult.data) {
         setNotifications(
-          notificationsData.map((notification) => ({
+          notificationsResult.data.map((notification) => ({
             id: Number(notification.id),
             message: notification.message,
             type: notification.type,
@@ -430,8 +449,20 @@ export default function App() {
             date: notification.created_at,
             user_id: notification.user_id,
             userEmail: userData.email,
+            metadata: 'metadata' in notification ? notification.metadata ?? undefined : undefined,
           })),
         );
+      }
+
+      const { data: matchData, error: matchError } = await supabase
+        .from('item_matches')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (matchError) {
+        console.error('Error fetching item matches:', matchError);
+      } else if (matchData) {
+        setItemMatches(matchData);
       }
 
       const { data: verificationData, error: verificationError } = await supabase
@@ -538,8 +569,17 @@ export default function App() {
       return false;
     }
     
+    let insertedItem: any | null = null;
+
     if (insertResult.data && insertResult.data.length > 0) {
-      setItems((currentItems) => [insertResult.data![0], ...currentItems]);
+      insertedItem = {
+        ...insertResult.data[0],
+        reporter_id: insertResult.data[0].reporter_id ?? itemToInsert.reporter_id,
+        reporter_name: insertResult.data[0].reporter_name ?? itemToInsert.reporter_name,
+        reporter_email: insertResult.data[0].reporter_email ?? itemToInsert.reporter_email,
+      };
+
+      setItems((currentItems) => [insertedItem, ...currentItems]);
     }
     
     // Add notification for successful submission
@@ -550,7 +590,106 @@ export default function App() {
       message: notification.message,
       type: notification.type,
     });
+
+    if (insertedItem) {
+      await runAutoMatching(insertedItem);
+    }
+
     return true;
+  };
+
+  const runAutoMatching = async (insertedItem: any) => {
+    if (!supabase) {
+      return;
+    }
+
+    const oppositeType = insertedItem.type === 'lost' ? 'found' : 'lost';
+    const { data: candidateItems, error: candidateItemsError } = await supabase
+      .from('items')
+      .select('*')
+      .eq('type', oppositeType)
+      .neq('id', insertedItem.id)
+      .order('id', { ascending: false });
+
+    if (candidateItemsError) {
+      console.error('Error fetching match candidates:', candidateItemsError);
+      return;
+    }
+
+    const matchedCandidates = findAutoMatchCandidates(insertedItem, candidateItems ?? [])
+      .filter((candidate) => candidate.scoreStatus === 'matched');
+
+    if (matchedCandidates.length === 0) {
+      return;
+    }
+
+    for (const candidate of matchedCandidates) {
+      const matchedItem = (candidateItems ?? []).find((item) => Number(item.id) === candidate.matchedItemId);
+      if (!matchedItem) {
+        continue;
+      }
+
+      const lostItemId = insertedItem.type === 'lost' ? insertedItem.id : matchedItem.id;
+      const foundItemId = insertedItem.type === 'found' ? insertedItem.id : matchedItem.id;
+
+      const { error: insertMatchError } = await supabase
+        .from('item_matches')
+        .upsert([{
+          lost_item_id: lostItemId,
+          found_item_id: foundItemId,
+          score: candidate.score,
+          status: 'matched',
+          match_reason: candidate.reason,
+        }], { onConflict: 'lost_item_id,found_item_id' });
+
+      if (insertMatchError) {
+        console.error('Error saving item match:', insertMatchError);
+        continue;
+      }
+
+      setItemMatches((currentMatches) => {
+        const nextMatch = {
+          id: Date.now() + Number(matchedItem.id),
+          lost_item_id: lostItemId,
+          found_item_id: foundItemId,
+          score: candidate.score,
+          status: 'matched',
+          match_reason: candidate.reason,
+          created_at: new Date().toISOString(),
+        };
+
+        const withoutDuplicate = currentMatches.filter((entry) => !(
+          Number(entry.lost_item_id) === lostItemId &&
+          Number(entry.found_item_id) === foundItemId
+        ));
+
+        return [nextMatch, ...withoutDuplicate];
+      });
+
+      await createNotification({
+        userId: insertedItem.reporter_id,
+        userEmail: insertedItem.reporter_email,
+        message: buildAutoMatchNotificationMessage(insertedItem.type, insertedItem.title, candidate.score),
+        type: 'match',
+        metadata: {
+          targetView: 'match-results',
+          itemId: insertedItem.id,
+        },
+      });
+
+      if (matchedItem.reporter_id && matchedItem.reporter_id !== insertedItem.reporter_id) {
+        await createNotification({
+          userId: matchedItem.reporter_id,
+          userEmail: matchedItem.reporter_email,
+          message: buildAutoMatchNotificationMessage(matchedItem.type, matchedItem.title, candidate.score),
+          type: 'match',
+          metadata: {
+            targetView: 'match-results',
+            itemId: matchedItem.id,
+          },
+        });
+      }
+    }
   };
 
   const updateItemStatus = async (id: number, status: string): Promise<boolean> => {
@@ -586,6 +725,7 @@ export default function App() {
     userEmail: string;
     message: string;
     type: AppNotification['type'];
+    metadata?: AppNotification['metadata'];
   }) => {
     const notificationDate = new Date().toISOString();
 
@@ -597,26 +737,45 @@ export default function App() {
         date: notificationDate,
         read: false,
         userEmail: payload.userEmail,
+        metadata: payload.metadata,
       };
       setNotifications((currentNotifications) => [notification, ...currentNotifications]);
       return;
     }
 
-    const { data, error } = await supabase
+    let insertResult = await supabase
       .from('notifications')
       .insert([{
         user_id: payload.userId,
         message: payload.message,
         type: payload.type,
+        metadata: payload.metadata ?? {},
       }])
-      .select('id, message, type, read, created_at, user_id')
+      .select('id, message, type, read, created_at, user_id, metadata')
       .maybeSingle();
 
-    if (error) {
-      console.error('Error creating notification:', error);
+    if (
+      insertResult.error
+      && insertResult.error.code === 'PGRST204'
+      && insertResult.error.message?.includes("'metadata'")
+    ) {
+      insertResult = await supabase
+        .from('notifications')
+        .insert([{
+          user_id: payload.userId,
+          message: payload.message,
+          type: payload.type,
+        }])
+        .select('id, message, type, read, created_at, user_id')
+        .maybeSingle();
+    }
+
+    if (insertResult.error) {
+      console.error('Error creating notification:', insertResult.error);
       return;
     }
 
+    const data = insertResult.data;
     if (data) {
       setNotifications((currentNotifications) => [
         {
@@ -627,6 +786,7 @@ export default function App() {
           date: data.created_at,
           user_id: data.user_id,
           userEmail: payload.userEmail,
+          metadata: 'metadata' in data ? data.metadata ?? undefined : payload.metadata,
         },
         ...currentNotifications,
       ]);
@@ -677,7 +837,8 @@ export default function App() {
       });
   };
 
-  const currentUserNotifications = notifications;
+  const currentUserMatches = buildUserMatchSummaries(itemMatches, items, userData.email, userData.id);
+  const currentUserNotifications = buildDerivedMatchNotifications(notifications, currentUserMatches, userData.email);
   const unreadCount = currentUserNotifications.filter((n: any) => !n.read).length;
 
   const handleLogout = async () => {
@@ -704,7 +865,15 @@ export default function App() {
     if (view === 'gallery') {
       setGalleryOwnershipFilter('all');
     }
+    if (view !== 'match-results') {
+      setSelectedMatchId(null);
+    }
     setCurrentView(view);
+  };
+
+  const openMatchResults = (matchId?: number | null) => {
+    setSelectedMatchId(matchId ?? null);
+    setCurrentView('match-results');
   };
 
   const openOwnReportsGallery = () => {
@@ -1082,6 +1251,7 @@ export default function App() {
     { id: 'report-lost', label: 'Lapor Hilang', icon: FileText },
     { id: 'report-found', label: 'Lapor Temuan', icon: Plus },
     { id: 'gallery', label: 'Galeri Barang', icon: Camera },
+    { id: 'match-results', label: 'Kecocokan', icon: Search },
     { id: 'notifications', label: 'Notifikasi', icon: Bell, badge: unreadCount > 0 ? unreadCount : undefined },
     { id: 'contact', label: 'Kontak', icon: Contact }
   ];
@@ -1347,11 +1517,27 @@ export default function App() {
           />
         )}
 
+        {currentView === 'match-results' && (
+          <MatchResultsPage
+            matches={currentUserMatches}
+            currentUserEmail={userData.email}
+            currentUserId={userData.id}
+            selectedMatchId={selectedMatchId}
+            onOpenReturnVerification={(itemId) => openReturnVerification(itemId, 'match-results')}
+          />
+        )}
+
         {currentView === 'notifications' && (
           <NotificationCenter
             notifications={currentUserNotifications}
             onMarkAsRead={markNotificationAsRead}
             onDeleteNotification={deleteNotification}
+            onOpenNotification={(notification) => {
+              markNotificationAsRead(notification.id);
+              if (notification.metadata?.targetView === 'match-results') {
+                openMatchResults(notification.metadata.matchId ?? null);
+              }
+            }}
           />
         )}
 

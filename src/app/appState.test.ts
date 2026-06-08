@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildAutoMatchNotificationMessage,
+  buildDerivedMatchNotifications,
+  buildUserMatchSummaries,
+  calculateMatchScore,
   buildReporterIdentityUpdate,
   buildSubmissionSuccessNotification,
   buildItemInsertPayload,
@@ -16,6 +20,8 @@ import {
   isPasswordMatch,
   normalizeIndonesianPhone,
   parseStoredJson,
+  findAutoMatchCandidates,
+  shouldShowContactAction,
   shouldHideItemFromListings,
   stripReporterIdentityFromItemPayload,
   validateImageFile,
@@ -305,5 +311,229 @@ describe("app state helpers", () => {
         ],
       )?.itemId,
     ).toBe(7);
+  });
+
+  it("scores strong lost/found similarities as an automatic match", () => {
+    const result = calculateMatchScore(
+      {
+        title: "Dompet coklat",
+        description: "Dompet kulit coklat berisi KTM dan kartu mahasiswa",
+        category: "Dompet",
+        type: "lost",
+        location: "Ruang Kelas A",
+        date: "2026-06-08",
+        image: "/lost-wallet.jpg",
+      },
+      {
+        title: "Dompet kulit warna coklat",
+        description: "Menemukan dompet coklat dengan kartu mahasiswa di dalamnya",
+        category: "Dompet",
+        type: "found",
+        location: "Ruang Kelas A",
+        date: "2026-06-08",
+        image: "/found-wallet.jpg",
+      },
+    );
+
+    expect(result.score).toBeGreaterThanOrEqual(75);
+    expect(result.status).toBe("matched");
+    expect(result.reason).toContain("Kategori sama");
+    expect(result.reason).toContain("Lokasi sama");
+  });
+
+  it("does not mark unrelated items as matched", () => {
+    const result = calculateMatchScore(
+      {
+        title: "Laptop Asus",
+        description: "Laptop hitam untuk praktikum",
+        category: "Elektronik",
+        type: "lost",
+        location: "Lab Komputer",
+        date: "2026-06-08",
+        image: "/laptop.jpg",
+      },
+      {
+        title: "Kunci motor Yamaha",
+        description: "Kunci motor dengan gantungan merah",
+        category: "Kunci",
+        type: "found",
+        location: "Parkiran Gedung B",
+        date: "2026-06-01",
+        image: "/key.jpg",
+      },
+    );
+
+    expect(result.score).toBeLessThan(60);
+    expect(result.status).toBe("rejected");
+  });
+
+  it("finds opposite-type candidates that exceed the smart matching threshold", () => {
+    const matches = findAutoMatchCandidates(
+      {
+        id: 10,
+        title: "Dompet coklat",
+        description: "Dompet kulit coklat berisi KTM",
+        category: "Dompet",
+        type: "lost",
+        location: "Ruang Kelas A",
+        date: "2026-06-08",
+        image: "/lost-wallet.jpg",
+        reporter_id: "user-1",
+      },
+      [
+        {
+          id: 11,
+          title: "Dompet kulit warna coklat",
+          description: "Menemukan dompet coklat dengan kartu mahasiswa",
+          category: "Dompet",
+          type: "found",
+          location: "Ruang Kelas A",
+          date: "2026-06-08",
+          image: "/found-wallet.jpg",
+          status: "available",
+          reporter_id: "user-2",
+        },
+        {
+          id: 12,
+          title: "Kunci motor",
+          description: "Kunci dengan gantungan hitam",
+          category: "Kunci",
+          type: "found",
+          location: "Parkiran Gedung B",
+          date: "2026-06-01",
+          image: "/key.jpg",
+          status: "available",
+          reporter_id: "user-3",
+        },
+      ],
+    );
+
+    expect(matches).toHaveLength(1);
+    expect(matches[0]).toMatchObject({
+      matchedItemId: 11,
+      scoreStatus: "matched",
+    });
+  });
+
+  it("hides the contact action for the owner of a report", () => {
+    expect(
+      shouldShowContactAction(
+        {
+          reporter_id: "user-1",
+          reporter_email: "zaky@student.umm.ac.id",
+          contact: "08123456789",
+        },
+        "zaky@student.umm.ac.id",
+        "user-1",
+      ),
+    ).toBe(false);
+
+    expect(
+      shouldShowContactAction(
+        {
+          reporter_id: "user-1",
+          reporter_email: "zaky@student.umm.ac.id",
+          contact: "08123456789",
+        },
+        "other@student.umm.ac.id",
+        "user-2",
+      ),
+    ).toBe(true);
+  });
+
+  it("builds a readable notification message for a successful match", () => {
+    expect(
+      buildAutoMatchNotificationMessage("lost", "Dompet coklat", 86),
+    ).toContain("kemungkinan kecocokan");
+  });
+
+  it("builds match summaries for the current user from item matches", () => {
+    const summaries = buildUserMatchSummaries(
+      [
+        {
+          id: 501,
+          lost_item_id: 10,
+          found_item_id: 11,
+          score: 86,
+          status: "matched",
+          match_reason: "Kategori sama, lokasi sama",
+          created_at: "2026-06-08T10:00:00.000Z",
+        },
+      ],
+      [
+        {
+          id: 10,
+          title: "Dompet coklat",
+          type: "lost",
+          reporter_id: "user-1",
+          reporter_email: "zaky@student.umm.ac.id",
+          location: "Ruang Kelas A",
+          date: "2026-06-08",
+          category: "Dompet",
+          description: "Dompet kulit coklat",
+          image: "/lost.jpg",
+          contact: "08123456789",
+        },
+        {
+          id: 11,
+          title: "Dompet kulit warna coklat",
+          type: "found",
+          reporter_id: "user-2",
+          reporter_email: "budi@student.umm.ac.id",
+          location: "Ruang Kelas A",
+          date: "2026-06-08",
+          category: "Dompet",
+          description: "Menemukan dompet coklat",
+          image: "/found.jpg",
+          contact: "081298765432",
+        },
+      ],
+      "zaky@student.umm.ac.id",
+      "user-1",
+    );
+
+    expect(summaries).toHaveLength(1);
+    expect(summaries[0]).toMatchObject({
+      matchId: 501,
+      score: 86,
+      myItem: { id: 10, title: "Dompet coklat" },
+      matchedItem: { id: 11, title: "Dompet kulit warna coklat" },
+    });
+  });
+
+  it("derives missing match notifications from stored match summaries", () => {
+    const notifications = buildDerivedMatchNotifications(
+      [],
+      [
+        {
+          matchId: 501,
+          score: 86,
+          status: "matched",
+          reason: "Kategori sama, lokasi sama",
+          myItem: {
+            id: 10,
+            title: "Dompet coklat",
+            type: "lost",
+          },
+          matchedItem: {
+            id: 11,
+            title: "Dompet kulit warna coklat",
+            type: "found",
+          },
+          createdAt: "2026-06-08T10:00:00.000Z",
+        },
+      ],
+      "zaky@student.umm.ac.id",
+    );
+
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]).toMatchObject({
+      type: "match",
+      userEmail: "zaky@student.umm.ac.id",
+      metadata: {
+        targetView: "match-results",
+        matchId: 501,
+      },
+    });
   });
 });

@@ -43,6 +43,11 @@ export type AppNotification = {
   read: boolean;
   user_id?: string;
   userEmail: string;
+  metadata?: {
+    targetView?: string;
+    matchId?: number;
+    itemId?: number;
+  };
 };
 
 export type ReporterIdentityUpdate = {
@@ -68,6 +73,67 @@ export type ItemReturnVerification = {
   approvedBy?: string | null;
 };
 
+export type MatchScoreResult = {
+  score: number;
+  status: "candidate" | "matched" | "rejected";
+  reason: string;
+};
+
+export type AutoMatchCandidate = {
+  sourceItemId?: number;
+  matchedItemId?: number;
+  score: number;
+  scoreStatus: MatchScoreResult["status"];
+  reason: string;
+};
+
+export type UserMatchSummary = {
+  matchId: number;
+  score: number;
+  status: string;
+  reason: string;
+  myItem: Record<string, unknown>;
+  matchedItem: Record<string, unknown>;
+  createdAt: string;
+};
+
+export function buildDerivedMatchNotifications(
+  notifications: AppNotification[],
+  matches: UserMatchSummary[],
+  userEmail: string,
+): AppNotification[] {
+  const existingMatchIds = new Set(
+    notifications
+      .filter((notification) => notification.type === "match")
+      .map((notification) => notification.metadata?.matchId)
+      .filter((matchId): matchId is number => typeof matchId === "number"),
+  );
+
+  const derivedNotifications = matches
+    .filter((match) => !existingMatchIds.has(match.matchId))
+    .map((match) => ({
+      id: -match.matchId,
+      message: buildAutoMatchNotificationMessage(
+        String(match.myItem.type ?? ""),
+        String(match.myItem.title ?? ""),
+        match.score,
+      ),
+      type: "match" as const,
+      date: match.createdAt,
+      read: false,
+      userEmail,
+      metadata: {
+        targetView: "match-results",
+        matchId: match.matchId,
+        itemId: typeof match.myItem.id === "number" ? match.myItem.id : Number(match.myItem.id),
+      },
+    }));
+
+  return [...derivedNotifications, ...notifications].sort(
+    (left, right) => new Date(right.date).getTime() - new Date(left.date).getTime(),
+  );
+}
+
 export function getReturnVerificationForItem(
   item: Record<string, unknown>,
   returnVerifications: ItemReturnVerification[] = [],
@@ -78,6 +144,301 @@ export function getReturnVerificationForItem(
       : Number(item.id);
 
   return returnVerifications.find((record) => record.itemId === itemId);
+}
+
+const MATCH_STOPWORDS = new Set([
+  "yang",
+  "dan",
+  "di",
+  "ke",
+  "dari",
+  "ada",
+  "itu",
+  "ini",
+  "untuk",
+  "dengan",
+  "saya",
+  "pada",
+  "atau",
+]);
+
+const MATCH_SYNONYMS: Record<string, string> = {
+  hp: "handphone",
+  ponsel: "handphone",
+  smartphone: "handphone",
+  ktm: "kartu mahasiswa",
+  kartuidentitas: "kartu identitas",
+  idcard: "kartu identitas",
+};
+
+function normalizeMatchText(value: unknown): string {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function tokenizeMatchText(value: unknown): string[] {
+  return normalizeMatchText(value)
+    .split(" ")
+    .flatMap((token) => {
+      if (!token || MATCH_STOPWORDS.has(token)) {
+        return [];
+      }
+
+      const synonym = MATCH_SYNONYMS[token] ?? token;
+      return synonym.split(" ").filter(Boolean);
+    });
+}
+
+function calculateTokenOverlapScore(
+  leftValue: unknown,
+  rightValue: unknown,
+  highScore: number,
+  mediumScore: number,
+): number {
+  const leftTokens = new Set(tokenizeMatchText(leftValue));
+  const rightTokens = new Set(tokenizeMatchText(rightValue));
+
+  if (leftTokens.size === 0 || rightTokens.size === 0) {
+    return 0;
+  }
+
+  const overlapCount = Array.from(leftTokens).filter((token) => rightTokens.has(token)).length;
+  const overlapRatio = overlapCount / Math.max(leftTokens.size, rightTokens.size);
+
+  if (overlapRatio >= 0.6) {
+    return highScore;
+  }
+
+  if (overlapRatio >= 0.3) {
+    return mediumScore;
+  }
+
+  return 0;
+}
+
+function calculateLocationScore(leftValue: unknown, rightValue: unknown): number {
+  const left = normalizeMatchText(leftValue);
+  const right = normalizeMatchText(rightValue);
+
+  if (!left || !right) {
+    return 0;
+  }
+
+  if (left === right) {
+    return 20;
+  }
+
+  const leftTokens = new Set(tokenizeMatchText(left));
+  const rightTokens = new Set(tokenizeMatchText(right));
+  const overlapCount = Array.from(leftTokens).filter((token) => rightTokens.has(token)).length;
+
+  return overlapCount > 0 ? 10 : 0;
+}
+
+function calculateDateScore(leftValue: unknown, rightValue: unknown): number {
+  if (typeof leftValue !== "string" || typeof rightValue !== "string") {
+    return 0;
+  }
+
+  const leftDate = new Date(leftValue);
+  const rightDate = new Date(rightValue);
+
+  if (Number.isNaN(leftDate.getTime()) || Number.isNaN(rightDate.getTime())) {
+    return 0;
+  }
+
+  const diffDays = Math.abs(leftDate.getTime() - rightDate.getTime()) / (1000 * 60 * 60 * 24);
+
+  if (diffDays <= 1) {
+    return 10;
+  }
+
+  if (diffDays <= 3) {
+    return 6;
+  }
+
+  if (diffDays <= 7) {
+    return 3;
+  }
+
+  return 0;
+}
+
+export function calculateMatchScore(
+  sourceItem: Record<string, unknown>,
+  candidateItem: Record<string, unknown>,
+): MatchScoreResult {
+  const reasonParts: string[] = [];
+  let score = 0;
+
+  const sourceCategory = normalizeMatchText(sourceItem.category);
+  const candidateCategory = normalizeMatchText(candidateItem.category);
+
+  if (sourceCategory && sourceCategory === candidateCategory) {
+    score += 30;
+    reasonParts.push("Kategori sama");
+  }
+
+  const titleScore = calculateTokenOverlapScore(sourceItem.title, candidateItem.title, 20, 10);
+  if (titleScore > 0) {
+    score += titleScore;
+    reasonParts.push(titleScore === 20 ? "Judul sangat mirip" : "Judul cukup mirip");
+  }
+
+  const descriptionScore = calculateTokenOverlapScore(
+    sourceItem.description,
+    candidateItem.description,
+    15,
+    8,
+  );
+  if (descriptionScore > 0) {
+    score += descriptionScore;
+    reasonParts.push(descriptionScore === 15 ? "Deskripsi cocok" : "Deskripsi cukup cocok");
+  }
+
+  const locationScore = calculateLocationScore(sourceItem.location, candidateItem.location);
+  if (locationScore > 0) {
+    score += locationScore;
+    reasonParts.push(locationScore === 20 ? "Lokasi sama" : "Lokasi berdekatan");
+  }
+
+  const dateScore = calculateDateScore(sourceItem.date, candidateItem.date);
+  if (dateScore > 0) {
+    score += dateScore;
+    reasonParts.push("Tanggal berdekatan");
+  }
+
+  if (sourceItem.image && candidateItem.image) {
+    score += 5;
+    reasonParts.push("Keduanya memiliki foto");
+  }
+
+  if (score >= 75) {
+    return {
+      score,
+      status: "matched",
+      reason: reasonParts.join(", "),
+    };
+  }
+
+  if (score >= 60) {
+    return {
+      score,
+      status: "candidate",
+      reason: reasonParts.join(", "),
+    };
+  }
+
+  return {
+    score,
+    status: "rejected",
+    reason: reasonParts.join(", "),
+  };
+}
+
+export function findAutoMatchCandidates(
+  sourceItem: Record<string, unknown>,
+  candidateItems: Record<string, unknown>[],
+): AutoMatchCandidate[] {
+  const sourceType = typeof sourceItem.type === "string" ? sourceItem.type : "";
+  const sourceReporterId = typeof sourceItem.reporter_id === "string" ? sourceItem.reporter_id : "";
+  const targetType = sourceType === "lost" ? "found" : sourceType === "found" ? "lost" : "";
+  const allowedStatuses = new Set(["active", "available"]);
+
+  return candidateItems
+    .filter((candidate) => {
+      const candidateType = typeof candidate.type === "string" ? candidate.type : "";
+      const candidateStatus = typeof candidate.status === "string" ? candidate.status : "";
+      const candidateReporterId = typeof candidate.reporter_id === "string" ? candidate.reporter_id : "";
+      const candidateId = typeof candidate.id === "number" ? candidate.id : Number(candidate.id);
+      const sourceId = typeof sourceItem.id === "number" ? sourceItem.id : Number(sourceItem.id);
+
+      return (
+        candidateType === targetType
+        && allowedStatuses.has(candidateStatus)
+        && candidateId !== sourceId
+        && (!sourceReporterId || !candidateReporterId || sourceReporterId !== candidateReporterId)
+      );
+    })
+    .map((candidate) => {
+      const result = calculateMatchScore(sourceItem, candidate);
+
+      return {
+        sourceItemId: typeof sourceItem.id === "number" ? sourceItem.id : Number(sourceItem.id),
+        matchedItemId: typeof candidate.id === "number" ? candidate.id : Number(candidate.id),
+        score: result.score,
+        scoreStatus: result.status,
+        reason: result.reason,
+      };
+    })
+    .filter((candidate) => candidate.scoreStatus !== "rejected")
+    .sort((left, right) => right.score - left.score);
+}
+
+export function shouldShowContactAction(
+  item: Record<string, unknown>,
+  currentUserEmail?: string,
+  currentUserId?: string,
+): boolean {
+  if (!item.contact) {
+    return false;
+  }
+
+  return !isReporterForItem(item, currentUserEmail ?? "", currentUserId);
+}
+
+export function buildAutoMatchNotificationMessage(
+  itemType: string,
+  itemTitle: string,
+  score: number,
+): string {
+  const reportLabel = itemType === "lost" ? "laporan kehilangan" : "laporan temuan";
+  return `Sistem menemukan kemungkinan kecocokan untuk ${reportLabel} "${itemTitle}" dengan skor ${score}%.`;
+}
+
+export function buildUserMatchSummaries(
+  matches: Record<string, unknown>[],
+  items: Record<string, unknown>[],
+  currentUserEmail?: string,
+  currentUserId?: string,
+): UserMatchSummary[] {
+  return matches
+    .map((match) => {
+      const lostItemId = typeof match.lost_item_id === "number" ? match.lost_item_id : Number(match.lost_item_id);
+      const foundItemId = typeof match.found_item_id === "number" ? match.found_item_id : Number(match.found_item_id);
+      const lostItem = items.find((item) => Number(item.id) === lostItemId);
+      const foundItem = items.find((item) => Number(item.id) === foundItemId);
+
+      if (!lostItem || !foundItem) {
+        return null;
+      }
+
+      const currentUserOwnsLost = isReporterForItem(lostItem, currentUserEmail ?? "", currentUserId);
+      const currentUserOwnsFound = isReporterForItem(foundItem, currentUserEmail ?? "", currentUserId);
+
+      if (!currentUserOwnsLost && !currentUserOwnsFound) {
+        return null;
+      }
+
+      return {
+        matchId: typeof match.id === "number" ? match.id : Number(match.id),
+        score: typeof match.score === "number" ? match.score : Number(match.score),
+        status: typeof match.status === "string" ? match.status : "",
+        reason: typeof match.match_reason === "string" ? match.match_reason : "",
+        myItem: currentUserOwnsLost ? lostItem : foundItem,
+        matchedItem: currentUserOwnsLost ? foundItem : lostItem,
+        createdAt: typeof match.created_at === "string" ? match.created_at : "",
+      };
+    })
+    .filter((entry): entry is UserMatchSummary => Boolean(entry))
+    .sort((left, right) => right.score - left.score);
 }
 
 export function getEffectiveItemStatus(

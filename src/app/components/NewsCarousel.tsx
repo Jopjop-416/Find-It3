@@ -31,11 +31,13 @@ import ik3 from "../../assets/ik3.png";
 import ik4 from "../../assets/ik4.png";
 import { getBrowseCategoryItems } from "./newsCarouselState";
 import { Button } from "./ui/button";
+import { ItemDetailActions } from "./ItemDetailActions";
 import {
-  buildWhatsAppUrl,
   getEffectiveItemStatus,
   getItemStatusLabel,
   getReturnVerificationForItem,
+  isReporterForItem,
+  shouldShowContactAction,
   type ItemReturnVerification,
 } from "../appState";
 
@@ -43,6 +45,10 @@ interface NewsCarouselProps {
   items?: any[];
   returnVerifications?: ItemReturnVerification[];
   onNavigate?: (view: string) => void;
+  canUpdateStatus?: boolean;
+  currentUserEmail?: string;
+  currentUserId?: string;
+  onOpenReturnVerification?: (itemId: number) => void;
 }
 
 const newsData = [
@@ -89,6 +95,10 @@ export function NewsCarousel({
   items = [],
   returnVerifications = [],
   onNavigate,
+  canUpdateStatus = false,
+  currentUserEmail = "",
+  currentUserId = "",
+  onOpenReturnVerification,
 }: NewsCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
@@ -382,7 +392,7 @@ export function NewsCarousel({
                       </div>
 
                       <CardContent className="flex flex-col p-3 pt-2.5 sm:p-3.5 sm:pt-3">
-                        <h4 className="mb-1 line-clamp-2 text-sm font-semibold leading-snug sm:mb-1.5 sm:text-base">
+                        <h4 className="mb-1 line-clamp-1 text-sm font-semibold leading-snug sm:mb-1.5 sm:text-base">
                           {item.title}
                         </h4>
                         <p className="mb-2 line-clamp-1 text-[11px] text-muted-foreground sm:mb-2.5 sm:text-xs">
@@ -492,19 +502,26 @@ export function NewsCarousel({
                         </div>
                       )}
 
-                      {item.contact && (
-                        <div className="flex gap-2 pt-4 border-t">
-                          <Button variant="outline" className="flex-1 rounded-sm" asChild>
-                            <a
-                              href={buildWhatsAppUrl(item.contact, item.title)}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              Hubungi Pelapor
-                            </a>
-                          </Button>
-                        </div>
-                      )}
+                      <ItemDetailActions
+                        contact={item.contact}
+                        itemTitle={item.title}
+                        showContact={shouldShowContactAction(item, currentUserEmail, currentUserId)}
+                        extraActions={[
+                          ...(canUpdateStatus &&
+                          isReporterForItem(item, currentUserEmail, currentUserId) &&
+                          effectiveStatus === "active" &&
+                          item.type === "lost" &&
+                          onOpenReturnVerification
+                            ? [
+                                {
+                                  key: "verify-found",
+                                  label: "Verifikasi Barang Sudah Ditemukan",
+                                  onClick: () => onOpenReturnVerification(item.id),
+                                },
+                              ]
+                            : []),
+                        ]}
+                      />
                     </div>
                   </DialogContent>
                 </Dialog>

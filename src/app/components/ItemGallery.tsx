@@ -28,15 +28,16 @@ import {
   DialogTrigger,
 } from "./ui/dialog";
 import {
-  buildWhatsAppUrl,
   getEffectiveItemStatus,
   getItemStatusLabel,
   getReturnVerificationForItem,
   getReporterDisplayName,
   isReporterForItem,
+  shouldShowContactAction,
   shouldHideItemFromListings,
   type ItemReturnVerification,
 } from "../appState";
+import { ItemDetailActions } from "./ItemDetailActions";
 
 interface ItemGalleryProps {
   items: any[];
@@ -319,7 +320,7 @@ export function ItemGallery({
                 </div>
 
                 <CardContent className="flex flex-col p-3 pt-2.5 sm:p-3.5 sm:pt-3">
-                  <h3 className="mb-1 line-clamp-2 text-sm font-semibold leading-snug sm:mb-1.5 sm:text-base">
+                  <h3 className="mb-1 line-clamp-1 text-sm font-semibold leading-snug sm:mb-1.5 sm:text-base">
                     {item.title}
                   </h3>
                   <p className="mb-2 line-clamp-1 text-[11px] text-muted-foreground sm:mb-2.5 sm:text-xs">
@@ -453,56 +454,49 @@ export function ItemGallery({
                   </div>
                 )}
 
-                <div className="flex gap-2 pt-4 border-t">
-                  <Button
-                    variant="outline"
-                    className="flex-1 rounded-sm"
-                    asChild
-                  >
-                    <a
-                      href={buildWhatsAppUrl(item.contact, item.title)}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Hubungi Pelapor
-                    </a>
-                  </Button>
-
-                  {canUpdateStatus &&
+                <ItemDetailActions
+                  contact={item.contact}
+                  itemTitle={item.title}
+                  showContact={shouldShowContactAction(item, currentUserEmail, currentUserId)}
+                  extraActions={[
+                    ...(canUpdateStatus &&
                     isReporterForItem(item, currentUserEmail, currentUserId) &&
                     effectiveStatus === "active" &&
-                    item.type === "lost" && (
-                      <Button
-                        onClick={() => onOpenReturnVerification(item.id)}
-                        className="flex-1 rounded-sm"
-                      >
-                        Verifikasi Barang Sudah Ditemukan
-                      </Button>
-                    )}
-
-                  {canUpdateStatus &&
+                    item.type === "lost"
+                      ? [
+                          {
+                            key: "verify-found",
+                            label: "Verifikasi Barang Sudah Ditemukan",
+                            onClick: () => onOpenReturnVerification(item.id),
+                          },
+                        ]
+                      : []),
+                    ...(canUpdateStatus &&
                     isReporterForItem(item, currentUserEmail, currentUserId) &&
                     effectiveStatus === "available" &&
-                    item.type === "found" && (
-                      <Button
-                        onClick={() => handleStatusUpdate(item.id, "claimed")}
-                        className="flex-1 rounded-sm"
-                      >
-                        Tandai Sudah Diambil
-                      </Button>
-                    )}
-
-                  {isAdminUser && effectiveStatus === "pending_verification" && (
-                    <Button
-                      onClick={() => {
-                        void onApproveVerification(item.id);
-                      }}
-                      className="flex-1 rounded-sm bg-black text-white hover:bg-gray-800"
-                    >
-                      Verifikasi Admin
-                    </Button>
-                  )}
-                </div>
+                    item.type === "found"
+                      ? [
+                          {
+                            key: "mark-claimed",
+                            label: "Tandai Sudah Diambil",
+                            onClick: () => handleStatusUpdate(item.id, "claimed"),
+                          },
+                        ]
+                      : []),
+                    ...(isAdminUser && effectiveStatus === "pending_verification"
+                      ? [
+                          {
+                            key: "admin-approve",
+                            label: "Verifikasi Admin",
+                            onClick: () => {
+                              void onApproveVerification(item.id);
+                            },
+                            className: "bg-black text-white hover:bg-gray-800",
+                          },
+                        ]
+                      : []),
+                  ]}
+                />
               </div>
             </DialogContent>
           </Dialog>
