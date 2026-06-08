@@ -99,4 +99,5 @@ describe("NewsCarousel", () => {
     expect(markup).toContain("grayscale");
     expect(markup).toContain("bg-gray-500");
   });
+
 });

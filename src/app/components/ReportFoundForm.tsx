@@ -23,6 +23,16 @@ interface ReportFoundFormProps {
   onRequireProfileCompletion: () => void;
   isLoggedIn: boolean;
   userPhone: string;
+  mode?: 'standard' | 'resolve-lost';
+  presetData?: {
+    sourceLostItemId: number;
+    title: string;
+    category: string;
+    description: string;
+    location: string;
+    image?: string;
+  } | null;
+  onSuccess?: () => void;
 }
 
 export function ReportFoundForm({
@@ -31,9 +41,27 @@ export function ReportFoundForm({
   onRequireProfileCompletion,
   isLoggedIn,
   userPhone,
+  mode = 'standard',
+  presetData = null,
+  onSuccess,
 }: ReportFoundFormProps) {
+  const isResolveMode = mode === 'resolve-lost' && Boolean(presetData);
+  const draftStorageKey = isResolveMode ? null : 'reportFoundDraft';
+  const canUseLocalStorage = typeof window !== 'undefined' && typeof localStorage !== 'undefined';
+
   const [formData, setFormData] = useState(() => {
-    return parseStoredJson(localStorage.getItem('reportFoundDraft'), {
+    if (isResolveMode && presetData) {
+      return {
+        title: presetData.title,
+        category: presetData.category,
+        description: presetData.description,
+        location: presetData.location,
+        contact: '',
+        image: presetData.image || '',
+      };
+    }
+
+    return parseStoredJson(canUseLocalStorage ? localStorage.getItem('reportFoundDraft') : null, {
       title: '',
       category: '',
       description: '',
@@ -47,7 +75,11 @@ export function ReportFoundForm({
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(() => {
-    const draft = parseStoredJson(localStorage.getItem('reportFoundDraft'), {
+    if (isResolveMode && presetData?.image) {
+      return presetData.image;
+    }
+
+    const draft = parseStoredJson(canUseLocalStorage ? localStorage.getItem('reportFoundDraft') : null, {
       image: '',
     });
     return draft.image || null;
@@ -55,8 +87,27 @@ export function ReportFoundForm({
 
   // Save draft to localStorage whenever formData changes
   useEffect(() => {
-    localStorage.setItem('reportFoundDraft', JSON.stringify(formData));
-  }, [formData]);
+    if (draftStorageKey && canUseLocalStorage) {
+      localStorage.setItem(draftStorageKey, JSON.stringify(formData));
+    }
+  }, [canUseLocalStorage, draftStorageKey, formData]);
+
+  useEffect(() => {
+    if (!isResolveMode || !presetData) {
+      return;
+    }
+
+    setFormData({
+      title: presetData.title,
+      category: presetData.category,
+      description: presetData.description,
+      location: presetData.location,
+      contact: '',
+      image: presetData.image || '',
+    });
+    setImagePreview(presetData.image || null);
+    setValidationError('');
+  }, [isResolveMode, presetData]);
 
   const categories = [
     'Elektronik',
@@ -106,7 +157,9 @@ export function ReportFoundForm({
     // Check if user is logged in
     if (!isLoggedIn) {
       // Save current form data to localStorage
-      localStorage.setItem('reportFoundDraft', JSON.stringify(formData));
+      if (draftStorageKey && canUseLocalStorage) {
+        localStorage.setItem(draftStorageKey, JSON.stringify(formData));
+      }
       // Show toast notification
       setShowLoginToast(true);
       // Redirect to login after delay
@@ -133,7 +186,9 @@ export function ReportFoundForm({
       ...formData,
       type: 'found',
       contact: normalizedUserPhone,
-      image: imagePreview || 'https://images.unsplash.com/photo-1661353559006-402f30f9e2a1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsb3N0JTIwcGhvbmUlMjB3YWxsZXQlMjBrZXlzfGVufDF8fHx8MTc1ODY5MDA0Nnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral'
+      image: imagePreview || 'https://images.unsplash.com/photo-1661353559006-402f30f9e2a1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsb3N0JTIwcGhvbmUlMjB3YWxsZXQlMjBrZXlzfGVufDF8fHx8MTc1ODY5MDA0Nnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
+      autoAcceptReturn: isResolveMode,
+      sourceLostItemId: presetData?.sourceLostItemId,
     });
 
     if (!success) {
@@ -142,7 +197,9 @@ export function ReportFoundForm({
     }
 
     // Clear draft and reset form
-    localStorage.removeItem('reportFoundDraft');
+    if (draftStorageKey && canUseLocalStorage) {
+      localStorage.removeItem(draftStorageKey);
+    }
     setFormData({
       title: '',
       category: '',
@@ -154,6 +211,7 @@ export function ReportFoundForm({
     setImagePreview(null);
     setShowSuccessToast(true);
     setIsSubmitting(false);
+    onSuccess?.();
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -189,7 +247,7 @@ export function ReportFoundForm({
         onClose={() => setShowLoginToast(false)}
       />
       <Toast
-        message="Laporan penemuan berhasil disubmit"
+        message={isResolveMode ? "Barang berhasil ditandai sudah ditemukan" : "Laporan penemuan berhasil disubmit"}
         isVisible={showSuccessToast}
         onClose={() => setShowSuccessToast(false)}
       />
@@ -198,14 +256,16 @@ export function ReportFoundForm({
           <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Eye className="w-5 h-5 text-green-600" />
-            <span>Laporan Penemuan Barang</span>
+            <span>{isResolveMode ? "Konfirmasi Barang Sudah Ditemukan" : "Laporan Penemuan Barang"}</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Alert className="mb-6 rounded-sm">
             <MapPin className="h-4 w-4" />
             <AlertDescription>
-              Terima kasih telah menemukan barang! Silakan laporkan dan serahkan ke security atau pusat informasi terdekat.
+              {isResolveMode
+                ? "Gunakan formulir ini untuk mengonfirmasi bahwa barang hilang Anda sudah ditemukan. Setelah dikirim, laporan akan langsung dipindahkan ke riwayat tanpa proses pending."
+                : "Terima kasih telah menemukan barang! Silakan laporkan dan serahkan ke security atau pusat informasi terdekat."}
             </AlertDescription>
           </Alert>
 
@@ -340,12 +400,20 @@ export function ReportFoundForm({
 
             <div className="bg-muted p-4 rounded-sm">
               <h4 className="font-semibold mb-2">Langkah Selanjutnya:</h4>
-              <ol className="text-sm text-muted-foreground space-y-1">
-                <li>1. Serahkan barang ke security atau pusat informasi terdekat</li>
-                <li>2. Tunjukkan laporan ini sebagai bukti penemuan</li>
-                <li>3. Admin akan memverifikasi dan mencocokkan dengan laporan kehilangan</li>
-                <li>4. Anda akan dihubungi jika ada update terkait barang ini</li>
-              </ol>
+              {isResolveMode ? (
+                <ol className="text-sm text-muted-foreground space-y-1">
+                  <li>1. Periksa kembali detail barang yang sudah ditemukan</li>
+                  <li>2. Kirim konfirmasi untuk menutup laporan kehilangan Anda</li>
+                  <li>3. Laporan akan langsung hilang dari daftar publik dan masuk ke Riwayat Anda</li>
+                </ol>
+              ) : (
+                <ol className="text-sm text-muted-foreground space-y-1">
+                  <li>1. Serahkan barang ke security atau pusat informasi terdekat</li>
+                  <li>2. Tunjukkan laporan ini sebagai bukti penemuan</li>
+                  <li>3. Admin akan memverifikasi dan mencocokkan dengan laporan kehilangan</li>
+                  <li>4. Anda akan dihubungi jika ada update terkait barang ini</li>
+                </ol>
+              )}
             </div>
 
             <Button 
@@ -353,7 +421,9 @@ export function ReportFoundForm({
               className="w-full rounded-sm" 
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Mengirim Laporan...' : 'Kirim Laporan Penemuan'}
+              {isSubmitting
+                ? (isResolveMode ? 'Mengonfirmasi Barang...' : 'Mengirim Laporan...')
+                : (isResolveMode ? 'Tandai Sudah Ditemukan' : 'Kirim Laporan Penemuan')}
             </Button>
           </form>
         </CardContent>

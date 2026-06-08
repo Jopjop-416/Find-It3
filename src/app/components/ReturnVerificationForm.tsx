@@ -22,6 +22,7 @@ interface ReturnVerificationFormProps {
     nim: string;
   };
   onBack: () => void;
+  mode?: "verification" | "history-claim";
   onSubmit: (payload: {
     itemId: number;
     reporterId: string;
@@ -37,6 +38,7 @@ export function ReturnVerificationForm({
   item,
   userData,
   onBack,
+  mode = "verification",
   onSubmit,
 }: ReturnVerificationFormProps) {
   const [nim, setNim] = useState(userData.nim);
@@ -114,15 +116,19 @@ export function ReturnVerificationForm({
     setIsSubmitting(false);
   };
 
+  const isHistoryClaimMode = mode === "history-claim";
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold">
-              Verifikasi Barang Sudah Ditemukan
+              {isHistoryClaimMode ? "Serah Terima Barang Sudah Diambil" : "Verifikasi Barang Sudah Ditemukan"}
             </h1>
             <p className="text-sm text-muted-foreground">
-              Lengkapi data serah terima untuk diteruskan ke admin.
+              {isHistoryClaimMode
+                ? "Lengkapi form serah terima sebelum laporan dipindahkan ke Riwayat Anda."
+                : "Lengkapi data serah terima untuk diteruskan ke admin."}
             </p>
           </div>
           <Button
@@ -147,7 +153,9 @@ export function ReturnVerificationForm({
             <Alert className="rounded-sm">
               <ShieldCheck className="h-4 w-4" />
               <AlertDescription>
-                Data profil dan barang diisi otomatis agar proses verifikasi admin lebih cepat.
+                {isHistoryClaimMode
+                  ? "Data profil dan barang diisi otomatis agar riwayat serah terima Anda tersimpan rapi."
+                  : "Data profil dan barang diisi otomatis agar proses verifikasi admin lebih cepat."}
               </AlertDescription>
             </Alert>
 
@@ -247,7 +255,7 @@ export function ReturnVerificationForm({
                   className="rounded-sm"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? "Mengirim..." : "Kirim Verifikasi"}
+                  {isSubmitting ? "Mengirim..." : isHistoryClaimMode ? "Simpan ke Riwayat" : "Kirim Verifikasi"}
                 </Button>
               </div>
             </form>

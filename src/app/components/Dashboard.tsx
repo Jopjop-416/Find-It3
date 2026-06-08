@@ -426,25 +426,23 @@ export function Dashboard({
                         ? [
                             {
                               key: "verify-found",
-                              label: "Verifikasi Barang Sudah Ditemukan",
+                              label: "Tandai Sudah Ditemukan",
                               onClick: () => onOpenReturnVerification(item.id),
                             },
                           ]
                         : []),
                       ...(canUpdateStatus &&
                       isReporterForItem(item, currentUserEmail, currentUserId) &&
-                      effectiveStatus === "available" &&
-                      item.type === "found"
-                        ? [
-                            {
-                              key: "mark-claimed",
-                              label: "Tandai Sudah Diambil",
-                              onClick: () => {
-                                void onUpdateStatus(item.id, "claimed");
+                        effectiveStatus === "available" &&
+                        item.type === "found"
+                          ? [
+                              {
+                                key: "mark-claimed",
+                                label: "Tandai Sudah Diambil",
+                                onClick: () => onOpenReturnVerification(item.id),
                               },
-                            },
-                          ]
-                        : []),
+                            ]
+                          : []),
                       ...(isAdminUser && effectiveStatus === "pending_verification"
                         ? [
                             {

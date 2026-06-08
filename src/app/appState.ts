@@ -591,9 +591,19 @@ export function buildItemInsertPayload(
   item: ReportFormData & { type: string },
   userData: UserData,
 ): ItemInsertPayload {
+  const sanitizedItem = {
+    title: item.title,
+    category: item.category,
+    description: item.description,
+    location: item.location,
+    contact: item.contact,
+    image: item.image,
+    type: item.type,
+  };
+
   return {
-    ...item,
-    status: item.type === "lost" ? "active" : "available",
+    ...sanitizedItem,
+    status: sanitizedItem.type === "lost" ? "active" : "available",
     date: new Date().toISOString().split("T")[0],
     reporter_id: userData.id,
     reporter_name: userData.name.trim() || "Pengguna Terdaftar",
@@ -692,7 +702,23 @@ export function shouldHideItemFromListings(
   returnVerifications: ItemReturnVerification[] = [],
 ): boolean {
   const effectiveStatus = getEffectiveItemStatus(item, returnVerifications);
-  return effectiveStatus === "verified_returned" || effectiveStatus === "returned";
+  return (
+    effectiveStatus === "verified_returned"
+    || effectiveStatus === "returned"
+    || effectiveStatus === "claimed"
+  );
+}
+
+export function shouldShowItemInHistory(
+  item: Record<string, unknown>,
+  returnVerifications: ItemReturnVerification[] = [],
+): boolean {
+  const effectiveStatus = getEffectiveItemStatus(item, returnVerifications);
+  return (
+    effectiveStatus === "verified_returned"
+    || effectiveStatus === "returned"
+    || effectiveStatus === "claimed"
+  );
 }
 
 export async function createPasswordHash(password: string): Promise<string> {

@@ -205,6 +205,18 @@ const emptyUserData: UserData = {
   isAdmin: false,
 };
 
+type FoundReportContext = {
+  sourceLostItemId: number;
+  title: string;
+  category: string;
+  description: string;
+  location: string;
+  image?: string;
+  returnView: string;
+};
+
+type VerificationFlowMode = 'verification' | 'history-claim';
+
 type ProfileRow = {
   id: string;
   username: string | null;
@@ -245,13 +257,15 @@ export default function App() {
   const [userData, setUserData] = useState<UserData>(emptyUserData);
   const [authToastMessage, setAuthToastMessage] = useState('');
   const [showAuthToast, setShowAuthToast] = useState(false);
-  const [galleryOwnershipFilter, setGalleryOwnershipFilter] = useState<"all" | "mine">("all");
+  const [galleryOwnershipFilter, setGalleryOwnershipFilter] = useState<"all" | "mine" | "history">("all");
   const [returnVerifications, setReturnVerifications] = useState<ItemReturnVerification[]>([]);
   const [itemMatches, setItemMatches] = useState<any[]>([]);
   const [readDerivedMatchIds, setReadDerivedMatchIds] = useState<number[]>([]);
+  const [foundReportContext, setFoundReportContext] = useState<FoundReportContext | null>(null);
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [selectedVerificationItemId, setSelectedVerificationItemId] = useState<number | null>(null);
   const [verificationReturnView, setVerificationReturnView] = useState('dashboard');
+  const [verificationFlowMode, setVerificationFlowMode] = useState<VerificationFlowMode>('verification');
   const isHistoryNavigationRef = useRef(false);
 
   const alertMissingSupabaseConfig = () => {
@@ -570,6 +584,23 @@ export default function App() {
       localStorage.setItem('redirectAfterLogin', currentView);
       setCurrentView('login');
       return false;
+    }
+
+    if (newItem.autoAcceptReturn && typeof newItem.sourceLostItemId === 'number') {
+      const statusUpdated = await updateItemStatus(newItem.sourceLostItemId, 'returned');
+
+      if (!statusUpdated) {
+        return false;
+      }
+
+      await createNotification({
+        userId: userData.id,
+        userEmail: userData.email,
+        message: `Laporan kehilangan "${newItem.title}" berhasil ditandai sudah ditemukan.`,
+        type: 'success',
+      });
+
+      return true;
     }
 
     const itemToInsert = buildItemInsertPayload(newItem, userData);
@@ -915,6 +946,12 @@ export default function App() {
     if (view === 'gallery') {
       setGalleryOwnershipFilter('all');
     }
+    if (view === 'report-found') {
+      setFoundReportContext(null);
+    }
+    if (view !== 'report-found' && foundReportContext) {
+      setFoundReportContext(null);
+    }
     if (view !== 'match-results') {
       setSelectedMatchId(null);
     }
@@ -928,6 +965,48 @@ export default function App() {
 
   const openOwnReportsGallery = () => {
     setGalleryOwnershipFilter('mine');
+    setCurrentView('gallery');
+  };
+
+  const openMarkFoundReport = (itemId: number, returnView: string) => {
+    const sourceItem = items.find((item) => item.id === itemId);
+
+    if (!sourceItem) {
+      return;
+    }
+
+    setFoundReportContext({
+      sourceLostItemId: itemId,
+      title: sourceItem.title,
+      category: sourceItem.category,
+      description: sourceItem.description,
+      location: sourceItem.location,
+      image: sourceItem.image,
+      returnView,
+    });
+    setCurrentView('report-found');
+  };
+
+  const openItemOwnerFollowUp = (itemId: number, fromView: string) => {
+    const sourceItem = items.find((item) => item.id === itemId);
+
+    if (!sourceItem) {
+      return;
+    }
+
+    if (sourceItem.type === 'found') {
+      openReturnVerification(itemId, fromView, 'history-claim');
+      return;
+    }
+
+    openMarkFoundReport(itemId, fromView);
+  };
+
+  const handleResolvedLostReportSuccess = () => {
+    setFoundReportContext(null);
+    setGalleryOwnershipFilter('history');
+    setAuthToastMessage('Barang berhasil ditandai sudah ditemukan dan dipindahkan ke Riwayat Anda');
+    setShowAuthToast(true);
     setCurrentView('gallery');
   };
 
@@ -1151,9 +1230,14 @@ export default function App() {
   const selectedVerificationItem = items.find((item) => item.id === selectedVerificationItemId) ?? null;
   const isAdminUser = userData.isAdmin;
 
-  const openReturnVerification = (itemId: number, fromView: string) => {
+  const openReturnVerification = (
+    itemId: number,
+    fromView: string,
+    mode: VerificationFlowMode = 'verification',
+  ) => {
     setSelectedVerificationItemId(itemId);
     setVerificationReturnView(fromView);
+    setVerificationFlowMode(mode);
     setCurrentView('return-verification');
   };
 
@@ -1166,6 +1250,8 @@ export default function App() {
     reporterNim: string;
     handoverPhoto: string;
   }): Promise<boolean> => {
+    const isDirectHistoryClaim = verificationFlowMode === 'history-claim';
+
     if (!supabase) {
       const verificationRecord: ItemReturnVerification = {
         id: Date.now(),
@@ -1176,21 +1262,32 @@ export default function App() {
         reporterPhone: payload.reporterPhone,
         reporterNim: payload.reporterNim,
         handoverPhoto: payload.handoverPhoto,
-        verificationStatus: 'pending',
+        verificationStatus: isDirectHistoryClaim ? 'approved' : 'pending',
         submittedAt: new Date().toISOString(),
       };
 
       setReturnVerifications((currentRecords) => [verificationRecord, ...currentRecords.filter((record) => record.itemId !== payload.itemId)]);
-      await createNotification({
-        userId: payload.reporterId,
-        userEmail: payload.reporterEmail,
-        message: 'Verifikasi barang sudah ditemukan sedang diproses admin',
-        type: 'verification',
-      });
-      setAuthToastMessage('Permintaan verifikasi berhasil dikirim');
-      setShowAuthToast(true);
-      setCurrentView(verificationReturnView);
+      if (isDirectHistoryClaim) {
+        setItems((currentItems) => currentItems.map((item) =>
+          item.id === payload.itemId ? { ...item, status: 'claimed' } : item
+        ));
+        setGalleryOwnershipFilter('history');
+        setAuthToastMessage('Serah terima berhasil disimpan dan laporan dipindahkan ke Riwayat Anda');
+        setShowAuthToast(true);
+        setCurrentView('gallery');
+      } else {
+        await createNotification({
+          userId: payload.reporterId,
+          userEmail: payload.reporterEmail,
+          message: 'Verifikasi barang sudah ditemukan sedang diproses admin',
+          type: 'verification',
+        });
+        setAuthToastMessage('Permintaan verifikasi berhasil dikirim');
+        setShowAuthToast(true);
+        setCurrentView(verificationReturnView);
+      }
       setSelectedVerificationItemId(null);
+      setVerificationFlowMode('verification');
       return true;
     }
 
@@ -1204,7 +1301,7 @@ export default function App() {
         reporter_phone: payload.reporterPhone,
         reporter_nim: payload.reporterNim,
         handover_photo: payload.handoverPhoto,
-        verification_status: 'pending',
+        verification_status: isDirectHistoryClaim ? 'approved' : 'pending',
       }], { onConflict: 'item_id' })
       .select('id, item_id, reporter_id, reporter_name, reporter_email, reporter_phone, reporter_nim, handover_photo, verification_status, submitted_at, approved_at, approved_by')
       .maybeSingle();
@@ -1212,14 +1309,17 @@ export default function App() {
     if (insertVerificationError) {
       console.error('Error inserting return verification:', insertVerificationError);
       alert('Terjadi kesalahan saat menyimpan verifikasi serah terima.');
-      return false;
-    }
+        return false;
+      }
 
-    const statusUpdated = await updateItemStatus(payload.itemId, 'pending_verification');
-    if (!statusUpdated) {
-      await supabase.from('item_return_verifications').delete().eq('item_id', payload.itemId);
-      return false;
-    }
+      const statusUpdated = await updateItemStatus(
+        payload.itemId,
+        isDirectHistoryClaim ? 'claimed' : 'pending_verification',
+      );
+      if (!statusUpdated) {
+        await supabase.from('item_return_verifications').delete().eq('item_id', payload.itemId);
+        return false;
+      }
 
     if (insertedVerification) {
       setReturnVerifications((currentRecords) => [
@@ -1237,22 +1337,30 @@ export default function App() {
           approvedAt: insertedVerification.approved_at,
           approvedBy: insertedVerification.approved_by,
         },
-        ...currentRecords.filter((record) => record.itemId !== payload.itemId),
-      ]);
-    }
+          ...currentRecords.filter((record) => record.itemId !== payload.itemId),
+        ]);
+      }
 
-    await createNotification({
-      userId: payload.reporterId,
-      userEmail: payload.reporterEmail,
-      message: 'Verifikasi barang sudah ditemukan sedang diproses admin',
-      type: 'verification',
-    });
-    setAuthToastMessage('Permintaan verifikasi berhasil dikirim');
-    setShowAuthToast(true);
-    setCurrentView(verificationReturnView);
-    setSelectedVerificationItemId(null);
-    return true;
-  };
+      if (isDirectHistoryClaim) {
+        setGalleryOwnershipFilter('history');
+        setAuthToastMessage('Serah terima berhasil disimpan dan laporan dipindahkan ke Riwayat Anda');
+        setShowAuthToast(true);
+        setCurrentView('gallery');
+      } else {
+        await createNotification({
+          userId: payload.reporterId,
+          userEmail: payload.reporterEmail,
+          message: 'Verifikasi barang sudah ditemukan sedang diproses admin',
+          type: 'verification',
+        });
+        setAuthToastMessage('Permintaan verifikasi berhasil dikirim');
+        setShowAuthToast(true);
+        setCurrentView(verificationReturnView);
+      }
+      setSelectedVerificationItemId(null);
+      setVerificationFlowMode('verification');
+      return true;
+    };
 
   const handleAdminApproveVerification = async (itemId: number): Promise<boolean> => {
     const success = await updateItemStatus(itemId, 'returned');
@@ -1504,7 +1612,7 @@ export default function App() {
             currentUserEmail={userData.email}
             currentUserId={userData.id}
             isAdminUser={isAdminUser}
-            onOpenReturnVerification={(itemId) => openReturnVerification(itemId, 'dashboard')}
+            onOpenReturnVerification={(itemId) => openItemOwnerFollowUp(itemId, 'dashboard')}
             onApproveVerification={handleAdminApproveVerification}
             returnVerifications={returnVerifications}
           />
@@ -1535,6 +1643,9 @@ export default function App() {
             }}
             isLoggedIn={isLoggedIn}
             userPhone={userData.phone}
+            mode={foundReportContext ? 'resolve-lost' : 'standard'}
+            presetData={foundReportContext}
+            onSuccess={foundReportContext ? handleResolvedLostReportSuccess : undefined}
             onRequireProfileCompletion={() => {
               alert('Lengkapi nomor HP Indonesia di halaman profil terlebih dahulu.');
               setCurrentView('profile');
@@ -1552,7 +1663,7 @@ export default function App() {
             ownershipFilter={galleryOwnershipFilter}
             onOwnershipFilterChange={setGalleryOwnershipFilter}
             isAdminUser={isAdminUser}
-            onOpenReturnVerification={(itemId) => openReturnVerification(itemId, 'gallery')}
+            onOpenReturnVerification={(itemId) => openItemOwnerFollowUp(itemId, 'gallery')}
             onApproveVerification={handleAdminApproveVerification}
             returnVerifications={returnVerifications}
           />
@@ -1563,6 +1674,7 @@ export default function App() {
             item={selectedVerificationItem}
             userData={userData}
             onBack={() => setCurrentView(verificationReturnView)}
+            mode={verificationFlowMode}
             onSubmit={handleSubmitReturnVerification}
           />
         )}
@@ -1573,7 +1685,7 @@ export default function App() {
             currentUserEmail={userData.email}
             currentUserId={userData.id}
             selectedMatchId={selectedMatchId}
-            onOpenReturnVerification={(itemId) => openReturnVerification(itemId, 'match-results')}
+            onOpenReturnVerification={(itemId) => openMarkFoundReport(itemId, 'match-results')}
           />
         )}
 

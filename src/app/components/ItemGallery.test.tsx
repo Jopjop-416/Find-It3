@@ -33,4 +33,20 @@ describe("ItemGallery", () => {
     expect(markup).toContain("line-clamp-1 text-sm font-semibold leading-snug");
   });
 
+  it("includes a Riwayat Anda ownership filter option", () => {
+    const markup = renderToStaticMarkup(
+      <ItemGallery
+        items={[]}
+        onUpdateStatus={vi.fn().mockResolvedValue(true)}
+        ownershipFilter="history"
+        onOwnershipFilterChange={vi.fn()}
+        onOpenReturnVerification={vi.fn()}
+        onApproveVerification={vi.fn().mockResolvedValue(true)}
+        returnVerifications={[]}
+      />,
+    );
+
+    expect(markup).toContain("Riwayat Anda");
+  });
+
 });

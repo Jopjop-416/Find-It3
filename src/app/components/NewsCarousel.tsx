@@ -515,7 +515,7 @@ export function NewsCarousel({
                             ? [
                                 {
                                   key: "verify-found",
-                                  label: "Verifikasi Barang Sudah Ditemukan",
+                                  label: "Tandai Sudah Ditemukan",
                                   onClick: () => onOpenReturnVerification(item.id),
                                 },
                               ]

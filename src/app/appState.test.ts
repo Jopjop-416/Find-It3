@@ -187,6 +187,40 @@ describe("app state helpers", () => {
     expect(stripReporterIdentityFromItemPayload(payload)).not.toHaveProperty("reporter_email");
   });
 
+  it("drops non-item helper fields before building the insert payload", () => {
+    const payload = buildItemInsertPayload(
+      {
+        title: "Dompet",
+        category: "Dompet",
+        description: "Dompet coklat",
+        location: "Ruang Kelas A",
+        contact: "628123456789",
+        image: "/wallet.jpg",
+        type: "found",
+        autoAcceptReturn: false,
+        sourceLostItemId: 10,
+      } as never,
+      {
+        id: "user-1",
+        email: "zaky@student.umm.ac.id",
+        name: "zakyumm",
+        avatar: "",
+        phone: "08123456789",
+        address: "Malang",
+        nim: "202310370311001",
+        isAdmin: false,
+      },
+    );
+
+    expect(payload).not.toHaveProperty("autoAcceptReturn");
+    expect(payload).not.toHaveProperty("sourceLostItemId");
+    expect(payload).toMatchObject({
+      title: "Dompet",
+      type: "found",
+      reporter_email: "zaky@student.umm.ac.id",
+    });
+  });
+
   it("detects when the Supabase items schema is missing reporter identity columns", () => {
     expect(
       isMissingReporterIdentityColumnError({
@@ -311,6 +345,12 @@ describe("app state helpers", () => {
         ],
       )?.itemId,
     ).toBe(7);
+    expect(
+      shouldHideItemFromListings(
+        { id: 8, status: "claimed" },
+        [],
+      ),
+    ).toBe(true);
   });
 
   it("scores strong lost/found similarities as an automatic match", () => {

@@ -35,6 +35,7 @@ import {
   isReporterForItem,
   shouldShowContactAction,
   shouldHideItemFromListings,
+  shouldShowItemInHistory,
   type ItemReturnVerification,
 } from "../appState";
 import { ItemDetailActions } from "./ItemDetailActions";
@@ -45,8 +46,8 @@ interface ItemGalleryProps {
   canUpdateStatus?: boolean;
   currentUserEmail?: string;
   currentUserId?: string;
-  ownershipFilter: "all" | "mine";
-  onOwnershipFilterChange: (value: "all" | "mine") => void;
+  ownershipFilter: "all" | "mine" | "history";
+  onOwnershipFilterChange: (value: "all" | "mine" | "history") => void;
   isAdminUser?: boolean;
   onOpenReturnVerification: (itemId: number) => void;
   onApproveVerification: (itemId: number) => Promise<boolean>;
@@ -85,7 +86,13 @@ export function ItemGallery({
   ];
 
   const visibleItems = items.filter((item) => !shouldHideItemFromListings(item, returnVerifications));
-  const filteredItems = visibleItems.filter((item) => {
+  const historyItems = items.filter(
+    (item) =>
+      shouldShowItemInHistory(item, returnVerifications)
+      && isReporterForItem(item, currentUserEmail, currentUserId),
+  );
+  const sourceItems = ownershipFilter === "history" ? historyItems : visibleItems;
+  const filteredItems = sourceItems.filter((item) => {
     const effectiveStatus = getEffectiveItemStatus(item, returnVerifications);
     const matchesSearch =
       item.title
@@ -105,9 +112,10 @@ export function ItemGallery({
     const matchesStatus =
       statusFilter === "all" || effectiveStatus === statusFilter;
     const matchesOwnership =
+      ownershipFilter === "history" ||
       ownershipFilter === "all" ||
       (currentUserEmail &&
-        item.reporter_email === currentUserEmail);
+        isReporterForItem(item, currentUserEmail, currentUserId));
 
     return (
       matchesSearch &&
@@ -132,6 +140,13 @@ export function ItemGallery({
     typeFilter !== "all" ||
     statusFilter !== "all" ||
     ownershipFilter !== "all";
+
+  const currentListLabel =
+    ownershipFilter === "history"
+      ? "Riwayat Anda"
+      : ownershipFilter === "mine"
+        ? "Laporan Anda"
+        : "Semua Laporan";
 
   const handleStatusUpdate = (
     id: number,
@@ -237,10 +252,10 @@ export function ItemGallery({
                 </SelectContent>
               </Select>
 
-              <Select
+                <Select
                 value={ownershipFilter}
                 onValueChange={(value) =>
-                  onOwnershipFilterChange(value as "all" | "mine")
+                  onOwnershipFilterChange(value as "all" | "mine" | "history")
                 }
               >
                 <SelectTrigger className="rounded-sm">
@@ -253,6 +268,9 @@ export function ItemGallery({
                   <SelectItem value="mine">
                     Laporan Anda
                   </SelectItem>
+                  <SelectItem value="history">
+                    Riwayat Anda
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -262,7 +280,7 @@ export function ItemGallery({
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
                   Menampilkan {filteredItems.length} dari{" "}
-                  {visibleItems.length} barang
+                  {sourceItems.length} barang
                 </p>
                 <Button
                   variant="outline"
@@ -278,6 +296,15 @@ export function ItemGallery({
           </div>
         </CardContent>
       </Card>
+
+      <div>
+        <h2 className="text-xl font-semibold mb-2">{currentListLabel}</h2>
+        <p className="text-sm text-muted-foreground">
+          {ownershipFilter === "history"
+            ? "Daftar laporan milik Anda yang sudah selesai dan dipindahkan ke riwayat."
+            : "Pilih laporan yang ingin Anda telusuri dari daftar barang yang tersedia."}
+        </p>
+      </div>
 
       {/* Items Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-[repeat(5,minmax(0,1fr))] gap-3">
@@ -454,6 +481,38 @@ export function ItemGallery({
                   </div>
                 )}
 
+                {verificationRecord && ownershipFilter === "history" && shouldShowItemInHistory(item, returnVerifications) && effectiveStatus !== "pending_verification" && (
+                  <div className="space-y-3 rounded-xs border bg-gray-50 p-4">
+                    <h4 className="font-semibold">Data Verifikasi Serah Terima</h4>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <div>
+                        <p className="text-muted-foreground text-xs">Nama</p>
+                        <p>{verificationRecord.reporterName}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Email</p>
+                        <p>{verificationRecord.reporterEmail}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">No HP</p>
+                        <p>{verificationRecord.reporterPhone}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">NIM</p>
+                        <p>{verificationRecord.reporterNim}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-2 text-sm text-muted-foreground">Foto Serah Terima</p>
+                      <img
+                        src={verificationRecord.handoverPhoto}
+                        alt="Foto serah terima"
+                        className="max-h-64 w-full max-w-md rounded-sm border bg-white object-contain"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <ItemDetailActions
                   contact={item.contact}
                   itemTitle={item.title}
@@ -466,7 +525,7 @@ export function ItemGallery({
                       ? [
                           {
                             key: "verify-found",
-                            label: "Verifikasi Barang Sudah Ditemukan",
+                            label: "Tandai Sudah Ditemukan",
                             onClick: () => onOpenReturnVerification(item.id),
                           },
                         ]
@@ -479,7 +538,7 @@ export function ItemGallery({
                           {
                             key: "mark-claimed",
                             label: "Tandai Sudah Diambil",
-                            onClick: () => handleStatusUpdate(item.id, "claimed"),
+                            onClick: () => onOpenReturnVerification(item.id),
                           },
                         ]
                       : []),
