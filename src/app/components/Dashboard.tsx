@@ -97,7 +97,7 @@ export function Dashboard({
           <div>
             <Button
               variant="outline"
-              className="bg-white text-black hover:bg-gray-300 border-white"
+              className="bg-white text-black hover:bg-gray-300 border-white rounded-sm"
               onClick={() => onNavigate?.("gallery")}
             >
               View our Gallery

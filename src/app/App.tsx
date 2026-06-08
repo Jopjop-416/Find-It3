@@ -232,6 +232,9 @@ const isMissingProfileOptionalColumnError = (
 };
 
 export default function App() {
+  const getDerivedMatchReadStorageKey = (userId?: string, userEmail?: string) =>
+    `derivedMatchRead:${userId || userEmail || 'guest'}`;
+
   const [currentView, setCurrentView] = useState('dashboard');
   const [items, setItems] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>(() => {
@@ -245,6 +248,7 @@ export default function App() {
   const [galleryOwnershipFilter, setGalleryOwnershipFilter] = useState<"all" | "mine">("all");
   const [returnVerifications, setReturnVerifications] = useState<ItemReturnVerification[]>([]);
   const [itemMatches, setItemMatches] = useState<any[]>([]);
+  const [readDerivedMatchIds, setReadDerivedMatchIds] = useState<number[]>([]);
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [selectedVerificationItemId, setSelectedVerificationItemId] = useState<number | null>(null);
   const [verificationReturnView, setVerificationReturnView] = useState('dashboard');
@@ -404,6 +408,31 @@ export default function App() {
       localStorage.setItem('notifications', JSON.stringify(notifications));
     }
   }, [notifications]);
+
+  useEffect(() => {
+    if (!userData.id && !userData.email) {
+      setReadDerivedMatchIds([]);
+      return;
+    }
+
+    setReadDerivedMatchIds(
+      parseStoredJson(
+        localStorage.getItem(getDerivedMatchReadStorageKey(userData.id, userData.email)),
+        [],
+      ),
+    );
+  }, [userData.id, userData.email]);
+
+  useEffect(() => {
+    if (!userData.id && !userData.email) {
+      return;
+    }
+
+    localStorage.setItem(
+      getDerivedMatchReadStorageKey(userData.id, userData.email),
+      JSON.stringify(readDerivedMatchIds),
+    );
+  }, [readDerivedMatchIds, userData.id, userData.email]);
 
   useEffect(() => {
     const fetchUserScopedData = async () => {
@@ -794,6 +823,22 @@ export default function App() {
   };
 
   const markNotificationAsRead = (id: number) => {
+    const currentNotification = currentUserNotifications.find((notification) => notification.id === id);
+    const derivedMatchId = currentNotification?.metadata?.matchId;
+
+    if (
+      currentNotification?.type === 'match'
+      && typeof derivedMatchId === 'number'
+      && id < 0
+    ) {
+      setReadDerivedMatchIds((currentReadIds) => (
+        currentReadIds.includes(derivedMatchId)
+          ? currentReadIds
+          : [...currentReadIds, derivedMatchId]
+      ));
+      return;
+    }
+
     if (!supabase) {
       setNotifications(notifications.map(notif =>
         notif.id === id ? { ...notif, read: true } : notif
@@ -838,7 +883,12 @@ export default function App() {
   };
 
   const currentUserMatches = buildUserMatchSummaries(itemMatches, items, userData.email, userData.id);
-  const currentUserNotifications = buildDerivedMatchNotifications(notifications, currentUserMatches, userData.email);
+  const currentUserNotifications = buildDerivedMatchNotifications(
+    notifications,
+    currentUserMatches,
+    userData.email,
+    readDerivedMatchIds,
+  );
   const unreadCount = currentUserNotifications.filter((n: any) => !n.read).length;
 
   const handleLogout = async () => {

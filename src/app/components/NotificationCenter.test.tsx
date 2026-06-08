@@ -32,9 +32,9 @@ describe("NotificationCenter", () => {
     expect(markup).toContain("flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2");
     expect(markup).toContain("w-full");
     expect(markup).toContain("sm:w-auto");
-    expect(markup).toContain("self-end");
-    expect(markup).toContain("sm:self-auto");
     expect(markup).toContain("flex flex-wrap items-center gap-2");
     expect(markup).toContain("Lihat Kecocokan");
+    expect(markup).toContain("absolute right-4 top-4 rounded-sm text-red-600 hover:text-red-700 hover:bg-red-50 sm:hidden");
+    expect(markup).toContain("hidden rounded-sm text-red-600 hover:text-red-700 hover:bg-red-50 sm:inline-flex");
   });
 });

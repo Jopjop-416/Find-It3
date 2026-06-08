@@ -135,8 +135,16 @@ export function NotificationCenter({ notifications, onMarkAsRead, onDeleteNotifi
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Notifikasi Baru</h2>
           {unreadNotifications.map((notification) => (
-            <Card key={notification.id} className="rounded-sm border border-green-600">
+            <Card key={notification.id} className="relative rounded-sm border border-green-600">
               <CardContent className="p-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDelete(notification.id)}
+                  className="absolute right-4 top-4 rounded-sm text-red-600 hover:text-red-700 hover:bg-red-50 sm:hidden"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex min-w-0 flex-1 items-start gap-3">
                     <div className="shrink-0 pt-0.5">
@@ -177,7 +185,7 @@ export function NotificationCenter({ notifications, onMarkAsRead, onDeleteNotifi
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDelete(notification.id)}
-                      className="self-end rounded-sm text-red-600 hover:text-red-700 hover:bg-red-50 sm:self-auto"
+                      className="hidden rounded-sm text-red-600 hover:text-red-700 hover:bg-red-50 sm:inline-flex"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -194,8 +202,16 @@ export function NotificationCenter({ notifications, onMarkAsRead, onDeleteNotifi
         <div className="space-y-4">
           <h2 className="text-lg font-semibold text-muted-foreground">Riwayat Notifikasi</h2>
           {readNotifications.map((notification) => (
-            <Card key={notification.id} className="rounded-sm opacity-75">
+            <Card key={notification.id} className="relative rounded-sm opacity-75">
               <CardContent className="p-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDelete(notification.id)}
+                  className="absolute right-4 top-4 rounded-sm text-red-600 hover:text-red-700 hover:bg-red-50 sm:hidden"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex min-w-0 flex-1 items-start gap-3">
                     <div className="shrink-0 pt-0.5">
@@ -209,23 +225,32 @@ export function NotificationCenter({ notifications, onMarkAsRead, onDeleteNotifi
                         <span className="text-xs text-muted-foreground">
                           {new Date(notification.date).toLocaleDateString('id-ID')}
                         </span>
-                        <Badge variant="outline" className="rounded-sm text-xs">
-                          Sudah dibaca
-                        </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground leading-6 break-words">
                         {notification.message}
                       </p>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(notification.id)}
-                    className="self-end rounded-sm text-red-600 hover:text-red-700 hover:bg-red-50 sm:self-auto"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2">
+                    {notification.type === 'match' && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => onOpenNotification(notification)}
+                        className="w-full rounded-sm bg-black text-xs text-white hover:bg-gray-800 sm:w-auto"
+                      >
+                        Lihat Kecocokan
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(notification.id)}
+                      className="hidden rounded-sm text-red-600 hover:text-red-700 hover:bg-red-50 sm:inline-flex"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

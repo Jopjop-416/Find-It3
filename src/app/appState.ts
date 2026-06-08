@@ -101,6 +101,7 @@ export function buildDerivedMatchNotifications(
   notifications: AppNotification[],
   matches: UserMatchSummary[],
   userEmail: string,
+  readMatchIds: number[] = [],
 ): AppNotification[] {
   const existingMatchIds = new Set(
     notifications
@@ -108,6 +109,7 @@ export function buildDerivedMatchNotifications(
       .map((notification) => notification.metadata?.matchId)
       .filter((matchId): matchId is number => typeof matchId === "number"),
   );
+  const readMatchIdSet = new Set(readMatchIds);
 
   const derivedNotifications = matches
     .filter((match) => !existingMatchIds.has(match.matchId))
@@ -120,7 +122,7 @@ export function buildDerivedMatchNotifications(
       ),
       type: "match" as const,
       date: match.createdAt,
-      read: false,
+      read: readMatchIdSet.has(match.matchId),
       userEmail,
       metadata: {
         targetView: "match-results",
