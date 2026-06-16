@@ -22,7 +22,7 @@ import { ReturnVerificationForm } from './components/ReturnVerificationForm';
 import { Footer } from './components/Footer';
 import { Toast } from './components/ui/toast';
 import { ImageWithFallback } from './components/figma/ImageWithFallback';
-import foundItLogo from 'figma:asset/6e20ff767bc819bcb65b83fac10d99d01f0c4fd8.png';
+import foundItLogo from 'figma:asset/6e20ff767bc819bcb65b83fac10d99d01f0c4fd8.webp';
 import {
   type AppNotification,
   buildAutoMatchNotificationMessage,

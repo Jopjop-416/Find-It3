@@ -36,10 +36,10 @@ import {
   shouldHideItemFromListings,
   type ItemReturnVerification,
 } from "../appState";
-import heroImage from "figma:asset/706763380527f5c21ddaccdcfcc1a4edffb8b3f2.png";
-import laporHilangImg from "figma:asset/2412be6deea607ec6f8ef7e655eb41ff2289957e.png";
-import laporTemuanImg from "figma:asset/6e0302b470dfeaee72f713a6f32bccb12ae8fd58.png";
-import merahBg from "../../assets/merah.png";
+import heroImage from "figma:asset/706763380527f5c21ddaccdcfcc1a4edffb8b3f2.webp";
+import laporHilangImg from "figma:asset/2412be6deea607ec6f8ef7e655eb41ff2289957e.webp";
+import laporTemuanImg from "figma:asset/6e0302b470dfeaee72f713a6f32bccb12ae8fd58.webp";
+import merahBg from "../../assets/merah.webp";
 
 interface DashboardProps {
   items: any[];

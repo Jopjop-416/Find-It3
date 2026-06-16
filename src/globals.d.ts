@@ -12,4 +12,5 @@ interface ImportMeta {
 
 declare module 'figma:asset/*';
 declare module '*.png';
+declare module '*.webp';
 declare module '*.jpg';

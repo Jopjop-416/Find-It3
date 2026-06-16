@@ -1,6 +1,6 @@
 import React from "react";
 import { MapPin, Mail, Phone, Facebook, Instagram, Twitter, Youtube } from "lucide-react";
-import foundItLogo from "figma:asset/logo2.png";
+import foundItLogo from "figma:asset/logo2.webp";
 
 export function Footer() {
   return (

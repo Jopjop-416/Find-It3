@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Toast } from './ui/toast';
 import { Bell, CheckCircle, AlertCircle, Info, Trash2 } from 'lucide-react';
-import krImage from '../../assets/kr2.png';
+import krImage from '../../assets/kr2.webp';
 
 interface Notification {
   id: number;

@@ -4,8 +4,8 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Toast } from "./ui/toast";
 import { TurnstileWidget } from "./TurnstileWidget";
-import foundItLogo from "figma:asset/6e20ff767bc819bcb65b83fac10d99d01f0c4fd8.png";
-import ummCampusImage from "../../imports/umm1.png";
+import foundItLogo from "figma:asset/6e20ff767bc819bcb65b83fac10d99d01f0c4fd8.webp";
+import ummCampusImage from "../../imports/umm1.webp";
 import { supabase } from "../../lib/supabase";
 import { verifyTurnstileToken } from "../../lib/turnstile";
 

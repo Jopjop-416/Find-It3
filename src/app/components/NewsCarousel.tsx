@@ -25,10 +25,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "./ui/dialog";
-import ik1 from "../../assets/ik1.png";
-import ik2 from "../../assets/ik2.png";
-import ik3 from "../../assets/ik3.png";
-import ik4 from "../../assets/ik4.png";
+import ik1 from "../../assets/ik1.webp";
+import ik2 from "../../assets/ik2.webp";
+import ik3 from "../../assets/ik3.webp";
+import ik4 from "../../assets/ik4.webp";
 import { getBrowseCategoryItems } from "./newsCarouselState";
 import { Button } from "./ui/button";
 import { ItemDetailActions } from "./ItemDetailActions";

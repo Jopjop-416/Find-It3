@@ -17,8 +17,8 @@ import {
   Users,
   HelpCircle,
 } from "lucide-react";
-import merahBg from "../../assets/merah.png";
-import biruBg from "../../assets/biru.png";
+import merahBg from "../../assets/merah.webp";
+import biruBg from "../../assets/biru.webp";
 
 export function ContactInfo() {
   const campusMapEmbedUrl =
