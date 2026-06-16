@@ -20,6 +20,8 @@ export function RegisterPage({
 }: RegisterPageProps) {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
+  const [nim, setNim] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,9 +42,11 @@ export function RegisterPage({
 
     const trimmedUsername = username.trim();
     const trimmedEmail = email.trim();
+    const trimmedNim = nim.trim();
+    const trimmedPhone = phone.trim();
     setShowToast(false);
 
-    if (!trimmedUsername || !trimmedEmail || !password || !confirmPassword) {
+    if (!trimmedUsername || !trimmedEmail || !trimmedNim || !trimmedPhone || !password || !confirmPassword) {
       showErrorToast("Semua field wajib diisi.");
       return;
     }
@@ -71,6 +75,30 @@ export function RegisterPage({
         return;
       }
 
+      // Pengecekan duplikasi NIM dan No HP
+      const { data: duplicateData, error: duplicateError } = await supabase.rpc('check_user_duplicates', {
+        check_nim: trimmedNim,
+        check_phone: trimmedPhone
+      });
+
+      if (duplicateError) {
+        console.error("Duplicate check error:", duplicateError);
+        showErrorToast("Gagal memvalidasi data. Pastikan database Supabase sudah diupdate dengan RPC.");
+        return;
+      }
+
+      if (duplicateData) {
+        const { nim_exists, phone_exists } = duplicateData as any;
+        if (nim_exists) {
+          showErrorToast("NIM ini sudah terdaftar.");
+          return;
+        }
+        if (phone_exists) {
+          showErrorToast("Nomor HP ini sudah terdaftar.");
+          return;
+        }
+      }
+
       // Proses registrasi menggunakan Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email: trimmedEmail,
@@ -80,12 +108,20 @@ export function RegisterPage({
             username: trimmedUsername,
             name: trimmedUsername,
             full_name: trimmedUsername,
+            phone: trimmedPhone,
+            nim: trimmedNim,
           },
         },
       });
 
       if (error) {
         showErrorToast("Gagal registrasi. Silakan coba lagi.");
+        return;
+      }
+
+      // Supabase mengembalikan identities kosong jika email sudah terdaftar
+      if (data?.user?.identities && data.user.identities.length === 0) {
+        showErrorToast("Email ini sudah terdaftar.");
         return;
       }
 
@@ -171,6 +207,42 @@ export function RegisterPage({
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full h-11 rounded-sm border border-gray-300 bg-white px-4 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="nim"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  NIM
+                </Label>
+                <Input
+                  id="nim"
+                  type="text"
+                  placeholder="Masukkan NIM Anda"
+                  value={nim}
+                  onChange={(e) => setNim(e.target.value)}
+                  required
+                  className="w-full h-11 rounded-sm border border-gray-300 bg-white px-4 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="phone"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  No HP
+                </Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="08xxxxxxxxxx"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
                   required
                   className="w-full h-11 rounded-sm border border-gray-300 bg-white px-4 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />

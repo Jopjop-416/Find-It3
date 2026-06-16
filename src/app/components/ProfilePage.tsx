@@ -24,7 +24,7 @@ interface ProfilePageProps {
     address: string;
     nim: string;
   };
-  onUpdateProfile: (data: { email: string; name: string; avatar?: string; phone: string; address: string; nim: string }) => Promise<boolean>;
+  onUpdateProfile: (data: { email: string; name: string; avatar?: string; phone: string; address: string; nim: string }) => Promise<{success: boolean, error?: string}>;
   onChangePassword: (oldPassword: string, newPassword: string) => boolean | Promise<boolean>;
   onDeleteAccount: (confirmation: string, email: string) => boolean | Promise<boolean>;
   onBrowseOwnReports: () => void;
@@ -40,6 +40,7 @@ export function ProfilePage({ userData, onUpdateProfile, onChangePassword, onDel
   const [previewUrl, setPreviewUrl] = useState<string | null>(userData.avatar || null);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("Perubahan berhasil disimpan!");
+  const [toastVariant, setToastVariant] = useState<"success" | "error">("success");
   const [showChangePasswordDialog, setShowChangePasswordDialog] = useState(false);
   const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
 
@@ -67,6 +68,7 @@ export function ProfilePage({ userData, onUpdateProfile, onChangePassword, onDel
     if (file) {
       const validation = validateImageFile(file);
       if (!validation.isValid) {
+        setToastVariant("error");
         setToastMessage(validation.message);
         setShowToast(true);
         e.target.value = "";
@@ -78,7 +80,7 @@ export function ProfilePage({ userData, onUpdateProfile, onChangePassword, onDel
         setPreviewUrl(compressedImage);
         setAvatar(compressedImage);
         
-        const didSave = await onUpdateProfile({
+        const result = await onUpdateProfile({
           email,
           name,
           avatar: compressedImage,
@@ -87,11 +89,17 @@ export function ProfilePage({ userData, onUpdateProfile, onChangePassword, onDel
           nim,
         });
 
-        if (didSave) {
+        if (result.success) {
+          setToastVariant("success");
           setToastMessage("Foto profile berhasil diubah!");
+          setShowToast(true);
+        } else if (result.error) {
+          setToastVariant("error");
+          setToastMessage(result.error);
           setShowToast(true);
         }
       } catch (error) {
+        setToastVariant("error");
         setToastMessage("Gagal memproses foto.");
         setShowToast(true);
       }
@@ -103,12 +111,13 @@ export function ProfilePage({ userData, onUpdateProfile, onChangePassword, onDel
 
     const phoneValidation = validateIndonesianPhone(phone);
     if (!phoneValidation.isValid) {
+      setToastVariant("error");
       setToastMessage(phoneValidation.message);
       setShowToast(true);
       return;
     }
 
-    const didSave = await onUpdateProfile({
+    const result = await onUpdateProfile({
       email,
       name,
       avatar: avatar || undefined,
@@ -117,8 +126,13 @@ export function ProfilePage({ userData, onUpdateProfile, onChangePassword, onDel
       nim: nim.trim(),
     });
 
-    if (didSave) {
+    if (result.success) {
+      setToastVariant("success");
       setToastMessage("Perubahan berhasil disimpan!");
+      setShowToast(true);
+    } else if (result.error) {
+      setToastVariant("error");
+      setToastMessage(result.error);
       setShowToast(true);
     }
   };
@@ -126,6 +140,7 @@ export function ProfilePage({ userData, onUpdateProfile, onChangePassword, onDel
   const handleChangePasswordSuccess = async (oldPassword: string, newPassword: string) => {
     const success = await onChangePassword(oldPassword, newPassword);
     if (success) {
+      setToastVariant("success");
       setToastMessage("Password berhasil diubah!");
       setShowToast(true);
     }
@@ -142,6 +157,7 @@ export function ProfilePage({ userData, onUpdateProfile, onChangePassword, onDel
         message={toastMessage}
         isVisible={showToast}
         onClose={() => setShowToast(false)}
+        variant={toastVariant}
       />
       <ChangePasswordDialog
         isOpen={showChangePasswordDialog}

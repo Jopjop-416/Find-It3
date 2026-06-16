@@ -1010,17 +1010,16 @@ export default function App() {
     setCurrentView('gallery');
   };
 
-  const handleUpdateProfile = async (data: { email: string; name: string; avatar?: string; phone: string; address: string; nim: string }): Promise<boolean> => {
+  const handleUpdateProfile = async (data: { email: string; name: string; avatar?: string; phone: string; address: string; nim: string }): Promise<{success: boolean, error?: string}> => {
     if (!supabase) {
       alertMissingSupabaseConfig();
-      return false;
+      return { success: false, error: 'Supabase configuration missing' };
     }
 
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-      alert('Sesi login Anda tidak ditemukan. Silakan login ulang.');
-      return false;
+      return { success: false, error: 'Sesi login Anda tidak ditemukan. Silakan login ulang.' };
     }
 
     const trimmedEmail = data.email.trim();
@@ -1057,8 +1056,7 @@ export default function App() {
     const { data: authData, error } = await supabase.auth.updateUser(updatePayload);
 
     if (error) {
-      alert("Gagal memperbarui profile: " + error.message);
-      return false;
+      return { success: false, error: "Gagal memperbarui profile: " + error.message };
     }
 
     const profilePayload = {
@@ -1096,8 +1094,13 @@ export default function App() {
     }
 
     if (profileResult.error) {
-      alert('Profil Auth sudah diperbarui, tetapi penyimpanan tabel profiles gagal: ' + profileResult.error.message);
-      return false;
+      if (profileResult.error.message.includes('profiles_phone_key')) {
+        return { success: false, error: 'Nomor HP sudah terdaftar. Silakan gunakan nomor lain.' };
+      } else if (profileResult.error.message.includes('profiles_nim_key')) {
+        return { success: false, error: 'NIM sudah terdaftar. Silakan gunakan NIM lain.' };
+      } else {
+        return { success: false, error: 'Penyimpanan tabel profiles gagal: ' + profileResult.error.message };
+      }
     }
 
     const updatedUser = authData.user ?? user;
@@ -1145,7 +1148,7 @@ export default function App() {
       type: 'success',
     });
 
-    return true;
+    return { success: true };
   };
 
   const handleChangePassword = async (oldPassword: string, newPassword: string): Promise<boolean> => {
