@@ -110,17 +110,37 @@ export function buildDerivedMatchNotifications(
   matches: UserMatchSummary[],
   userEmail: string,
   readMatchIds: number[] = [],
+  dismissedMatchIds: number[] = [],
 ): AppNotification[] {
+  const readMatchIdSet = new Set(readMatchIds);
+  const dismissedMatchIdSet = new Set(dismissedMatchIds);
+
+  const filteredNotifications = notifications.filter((notification) => {
+    if (notification.type === "match" && typeof notification.metadata?.matchId === "number") {
+      return !dismissedMatchIdSet.has(notification.metadata.matchId);
+    }
+    return true;
+  });
+
   const existingMatchIds = new Set(
-    notifications
+    filteredNotifications
       .filter((notification) => notification.type === "match")
       .map((notification) => notification.metadata?.matchId)
       .filter((matchId): matchId is number => typeof matchId === "number"),
   );
-  const readMatchIdSet = new Set(readMatchIds);
 
+  const seenMatchIds = new Set<number>();
   const derivedNotifications = matches
-    .filter((match) => !existingMatchIds.has(match.matchId))
+    .filter((match) => {
+      if (existingMatchIds.has(match.matchId) || dismissedMatchIdSet.has(match.matchId)) {
+        return false;
+      }
+      if (seenMatchIds.has(match.matchId)) {
+        return false;
+      }
+      seenMatchIds.add(match.matchId);
+      return true;
+    })
     .map((match) => ({
       id: -match.matchId,
       message: buildAutoMatchNotificationMessage(
@@ -139,7 +159,7 @@ export function buildDerivedMatchNotifications(
       },
     }));
 
-  return [...derivedNotifications, ...notifications].sort(
+  return [...derivedNotifications, ...filteredNotifications].sort(
     (left, right) => new Date(right.date).getTime() - new Date(left.date).getTime(),
   );
 }

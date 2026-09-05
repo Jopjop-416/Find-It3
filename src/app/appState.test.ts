@@ -612,4 +612,59 @@ describe("app state helpers", () => {
       },
     });
   });
+
+  it("omits derived match notifications when their match id is dismissed", () => {
+    const notifications = buildDerivedMatchNotifications(
+      [],
+      [
+        {
+          matchId: 777,
+          score: 81,
+          status: "matched",
+          reason: "Kategori sama, lokasi sama",
+          myItem: {
+            id: 20,
+            title: "Tas hitam",
+            type: "lost",
+          },
+          matchedItem: {
+            id: 21,
+            title: "Tas hitam Eiger",
+            type: "found",
+          },
+          createdAt: "2026-06-08T10:00:00.000Z",
+        },
+      ],
+      "zaky@student.umm.ac.id",
+      [],
+      [777],
+    );
+
+    expect(notifications).toHaveLength(0);
+  });
+
+  it("omits stored notifications when their match id is dismissed", () => {
+    const notifications = buildDerivedMatchNotifications(
+      [
+        {
+          id: 101,
+          message: "Match found",
+          type: "match",
+          read: true,
+          date: "2026-06-08T10:00:00.000Z",
+          userEmail: "zaky@student.umm.ac.id",
+          metadata: {
+            targetView: "match-results",
+            matchId: 888,
+          },
+        },
+      ],
+      [],
+      "zaky@student.umm.ac.id",
+      [],
+      [888],
+    );
+
+    expect(notifications).toHaveLength(0);
+  });
 });

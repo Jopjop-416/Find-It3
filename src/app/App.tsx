@@ -249,6 +249,8 @@ const isMissingProfileOptionalColumnError = (
 export default function App() {
   const getDerivedMatchReadStorageKey = (userId?: string, userEmail?: string) =>
     `derivedMatchRead:${userId || userEmail || 'guest'}`;
+  const getDerivedMatchDismissedStorageKey = (userId?: string, userEmail?: string) =>
+    `derivedMatchDismissed:${userId || userEmail || 'guest'}`;
 
   const [currentView, setCurrentView] = useState('dashboard');
   const [items, setItems] = useState<any[]>([]);
@@ -264,6 +266,7 @@ export default function App() {
   const [returnVerifications, setReturnVerifications] = useState<ItemReturnVerification[]>([]);
   const [itemMatches, setItemMatches] = useState<any[]>([]);
   const [readDerivedMatchIds, setReadDerivedMatchIds] = useState<number[]>([]);
+  const [dismissedDerivedMatchIds, setDismissedDerivedMatchIds] = useState<number[]>([]);
   const [foundReportContext, setFoundReportContext] = useState<FoundReportContext | null>(null);
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [selectedVerificationItemId, setSelectedVerificationItemId] = useState<number | null>(null);
@@ -427,29 +430,33 @@ export default function App() {
   }, [notifications]);
 
   useEffect(() => {
-    if (!userData.id && !userData.email) {
-      setReadDerivedMatchIds([]);
-      return;
-    }
-
     setReadDerivedMatchIds(
       parseStoredJson(
         localStorage.getItem(getDerivedMatchReadStorageKey(userData.id, userData.email)),
         [],
       ),
     );
+    setDismissedDerivedMatchIds(
+      parseStoredJson(
+        localStorage.getItem(getDerivedMatchDismissedStorageKey(userData.id, userData.email)),
+        [],
+      ),
+    );
   }, [userData.id, userData.email]);
 
   useEffect(() => {
-    if (!userData.id && !userData.email) {
-      return;
-    }
-
     localStorage.setItem(
       getDerivedMatchReadStorageKey(userData.id, userData.email),
       JSON.stringify(readDerivedMatchIds),
     );
   }, [readDerivedMatchIds, userData.id, userData.email]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      getDerivedMatchDismissedStorageKey(userData.id, userData.email),
+      JSON.stringify(dismissedDerivedMatchIds),
+    );
+  }, [dismissedDerivedMatchIds, userData.id, userData.email]);
 
   useEffect(() => {
     const fetchUserScopedData = async () => {
@@ -961,18 +968,24 @@ export default function App() {
         upsertPayload.match_details = result.matchDetails;
       }
 
-      const { error: insertMatchError } = await supabase
+      const { data: upsertedMatchData, error: insertMatchError } = await supabase
         .from('item_matches')
-        .upsert([upsertPayload], { onConflict: 'lost_item_id,found_item_id' });
+        .upsert([upsertPayload], { onConflict: 'lost_item_id,found_item_id' })
+        .select('id')
+        .maybeSingle();
 
       if (insertMatchError) {
         console.error('[runAutoMatching] Error saving item match:', insertMatchError);
         continue;
       }
 
+      const matchRecordId = upsertedMatchData?.id
+        ? Number(upsertedMatchData.id)
+        : Date.now() + Number(result.matchedItem.id);
+
       setItemMatches((currentMatches) => {
         const nextMatch = {
-          id: Date.now() + Number(result.matchedItem.id),
+          id: matchRecordId,
           lost_item_id: result.lostItemId,
           found_item_id: result.foundItemId,
           score: result.score,
@@ -1010,6 +1023,7 @@ export default function App() {
           metadata: {
             targetView: 'match-results',
             itemId: insertedItem.id,
+            matchId: matchRecordId,
           },
         });
 
@@ -1029,6 +1043,7 @@ export default function App() {
             metadata: {
               targetView: 'match-results',
               itemId: result.matchedItem.id,
+              matchId: matchRecordId,
             },
           });
         }
@@ -1137,9 +1152,19 @@ export default function App() {
     }
   };
 
+  const currentUserMatches = buildUserMatchSummaries(itemMatches, items, userData.email, userData.id);
+  const currentUserNotifications = buildDerivedMatchNotifications(
+    notifications,
+    currentUserMatches,
+    userData.email,
+    readDerivedMatchIds,
+    dismissedDerivedMatchIds,
+  );
+  const unreadCount = currentUserNotifications.filter((n: any) => !n.read).length;
+
   const markNotificationAsRead = (id: number) => {
     const currentNotification = currentUserNotifications.find((notification) => notification.id === id);
-    const derivedMatchId = currentNotification?.metadata?.matchId;
+    const derivedMatchId = currentNotification?.metadata?.matchId ?? (id < 0 ? Math.abs(id) : undefined);
 
     if (
       currentNotification?.type === 'match'
@@ -1155,7 +1180,7 @@ export default function App() {
     }
 
     if (!supabase) {
-      setNotifications(notifications.map(notif =>
+      setNotifications((currentNotifications) => currentNotifications.map((notif) =>
         notif.id === id ? { ...notif, read: true } : notif
       ));
       return;
@@ -1178,8 +1203,35 @@ export default function App() {
   };
 
   const deleteNotification = (id: number) => {
+    const targetNotification = currentUserNotifications.find((notification) => notification.id === id);
+    let matchId = targetNotification?.metadata?.matchId ?? (id < 0 ? Math.abs(id) : undefined);
+    if (!matchId && targetNotification?.type === 'match' && targetNotification?.metadata?.itemId) {
+      const relatedMatch = currentUserMatches.find(
+        (m) => Number(m.myItem.id) === targetNotification.metadata?.itemId ||
+               Number(m.matchedItem.id) === targetNotification.metadata?.itemId
+      );
+      if (relatedMatch) {
+        matchId = relatedMatch.matchId;
+      }
+    }
+
+    if (typeof matchId === 'number') {
+      setDismissedDerivedMatchIds((currentDismissedIds) => (
+        currentDismissedIds.includes(matchId)
+          ? currentDismissedIds
+          : [...currentDismissedIds, matchId]
+      ));
+      setReadDerivedMatchIds((currentReadIds) =>
+        currentReadIds.filter((readId) => readId !== matchId)
+      );
+    }
+
+    if (id < 0) {
+      return;
+    }
+
     if (!supabase) {
-      setNotifications(notifications.filter(notif => notif.id !== id));
+      setNotifications((currentNotifications) => currentNotifications.filter((notif) => notif.id !== id));
       return;
     }
 
@@ -1196,15 +1248,6 @@ export default function App() {
         setNotifications((currentNotifications) => currentNotifications.filter((notif) => notif.id !== id));
       });
   };
-
-  const currentUserMatches = buildUserMatchSummaries(itemMatches, items, userData.email, userData.id);
-  const currentUserNotifications = buildDerivedMatchNotifications(
-    notifications,
-    currentUserMatches,
-    userData.email,
-    readDerivedMatchIds,
-  );
-  const unreadCount = currentUserNotifications.filter((n: any) => !n.read).length;
 
   const handleLogout = async () => {
     if (!supabase) {
@@ -1983,8 +2026,15 @@ export default function App() {
             onDeleteNotification={deleteNotification}
             onOpenNotification={(notification) => {
               markNotificationAsRead(notification.id);
-              if (notification.metadata?.targetView === 'match-results') {
-                openMatchResults(notification.metadata.matchId ?? null);
+              if (notification.type === 'match' || notification.metadata?.targetView === 'match-results') {
+                const matchId = notification.metadata?.matchId
+                  ?? (notification.id < 0 ? Math.abs(notification.id) : null)
+                  ?? currentUserMatches.find((m) =>
+                    Number(m.myItem.id) === notification.metadata?.itemId ||
+                    Number(m.matchedItem.id) === notification.metadata?.itemId
+                  )?.matchId
+                  ?? null;
+                openMatchResults(matchId);
               }
             }}
           />

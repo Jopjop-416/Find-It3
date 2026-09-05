@@ -5,6 +5,9 @@ import { Badge } from './ui/badge';
 import { Toast } from './ui/toast';
 import { Bell, CheckCircle, AlertCircle, Info, Trash2 } from 'lucide-react';
 import krImage from '../../assets/kr2.webp';
+import biruPng from '../../assets/biru.png';
+import merahPng from '../../assets/merah.png';
+import hitamPng from '../../assets/hitam.png';
 
 interface Notification {
   id: number;
@@ -93,38 +96,59 @@ export function NotificationCenter({ notifications, onMarkAsRead, onDeleteNotifi
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="rounded-sm">
-          <CardContent className="p-4">
+        <Card className="relative overflow-hidden rounded-sm border-gray-900">
+          <img
+            src={hitamPng}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/20" />
+          <CardContent className="relative z-10 p-4 text-white">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Notifikasi</p>
-                <p className="text-2xl font-bold">{notifications.length}</p>
+                <p className="text-sm text-white/90 font-medium">Total Notifikasi</p>
+                <p className="text-2xl font-bold text-white">{notifications.length}</p>
               </div>
-              <Bell className="w-8 h-8 text-muted-foreground" />
+              <Bell className="w-8 h-8 text-white/90" />
             </div>
           </CardContent>
         </Card>
         
-        <Card className="rounded-sm">
-          <CardContent className="p-4">
+        <Card className="relative overflow-hidden rounded-sm border-red-900">
+          <img
+            src={merahPng}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/15" />
+          <CardContent className="relative z-10 p-4 text-white">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Belum Dibaca</p>
-                <p className="text-2xl font-bold text-green-600">{unreadNotifications.length}</p>
+                <p className="text-sm text-white/90 font-medium">Belum Dibaca</p>
+                <p className="text-2xl font-bold text-white">{unreadNotifications.length}</p>
               </div>
-              <div className="w-3 h-3 bg-green-600 rounded-full"></div>
+              <div className="w-3.5 h-3.5 bg-white rounded-full ring-4 ring-white/20"></div>
             </div>
           </CardContent>
         </Card>
         
-        <Card className="rounded-sm">
-          <CardContent className="p-4">
+        <Card className="relative overflow-hidden rounded-sm border-blue-300">
+          <img
+            src={biruPng}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/15" />
+          <CardContent className="relative z-10 p-4 text-white">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Sudah Dibaca</p>
-                <p className="text-2xl font-bold text-gray-600">{readNotifications.length}</p>
+                <p className="text-sm text-white/90 font-medium">Sudah Dibaca</p>
+                <p className="text-2xl font-bold text-white">{readNotifications.length}</p>
               </div>
-              <CheckCircle className="w-8 h-8 text-gray-600" />
+              <CheckCircle className="w-8 h-8 text-white/90" />
             </div>
           </CardContent>
         </Card>

@@ -13,12 +13,7 @@ import {
   MapPin,
   Clock,
   MessageSquare,
-  Shield,
-  Users,
-  HelpCircle,
 } from "lucide-react";
-import merahBg from "../../assets/merah.webp";
-import biruBg from "../../assets/biru.webp";
 
 export function ContactInfo() {
   const campusMapEmbedUrl =
@@ -72,32 +67,6 @@ export function ContactInfo() {
     },
   ];
 
-  const quickActions = [
-    {
-      title: "Lapor Kehilangan Darurat",
-      description:
-        "Untuk barang penting seperti KTM, SIM, atau dokumen",
-      icon: Shield,
-      action: "Hubungi Security",
-      urgent: true,
-    },
-    {
-      title: "Verifikasi Klaim Barang",
-      description:
-        "Konfirmasi kepemilikan barang yang ingin diambil",
-      icon: Users,
-      action: "Hubungi Admin",
-      urgent: false,
-    },
-    {
-      title: "Bantuan Teknis",
-      description:
-        "Masalah dengan website atau sistem pelaporan",
-      icon: HelpCircle,
-      action: "Hubungi IT Support",
-      urgent: false,
-    },
-  ];
 
   return (
     <div className="space-y-8">
@@ -111,72 +80,6 @@ export function ContactInfo() {
         </p>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {quickActions.map((action, index) => {
-          const Icon = action.icon;
-          return (
-            <Card
-              key={index}
-              className={
-                action.urgent
-                  ? "relative overflow-hidden rounded-sm border-red-200"
-                  : "relative overflow-hidden rounded-sm border-blue-200"
-              }
-            >
-              {(action.urgent || !action.urgent) && (
-                <>
-                  <img
-                    src={action.urgent ? merahBg : biruBg}
-                    alt=""
-                    aria-hidden="true"
-                    className="absolute inset-0 h-full w-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/25" />
-                </>
-              )}
-              <CardContent
-                className="relative z-10 p-4 text-white"
-              >
-                <div className="flex items-start space-x-3">
-                  <div
-                    className="rounded-sm bg-white/15 p-2 backdrop-blur-sm"
-                  >
-                    <Icon
-                      className="w-5 h-5 text-white"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold mb-1">
-                      {action.title}
-                    </h3>
-                    <p
-                      className="mb-3 text-sm text-white/90"
-                    >
-                      {action.description}
-                    </p>
-                    <Button
-                      size="sm"
-                      variant={
-                        action.urgent
-                          ? "destructive"
-                          : "default"
-                      }
-                      className={
-                        action.urgent
-                          ? "w-full rounded-sm bg-red-700 text-white hover:bg-black hover:text-white text-xs"
-                          : "w-full rounded-sm bg-black text-white hover:bg-white hover:text-black text-xs"
-                      }
-                    >
-                      {action.action}
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
 
       {/* Contact Points */}
       <div className="space-y-4">
