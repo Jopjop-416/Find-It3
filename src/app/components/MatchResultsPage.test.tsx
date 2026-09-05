@@ -56,4 +56,62 @@ describe("MatchResultsPage", () => {
     expect(markup).not.toContain("border-l-4");
     expect(markup).toContain("Dompet kulit warna coklat");
   });
+
+  it("renders circular progress gauges for AI visual similarity and score breakdown", () => {
+    const markup = renderToStaticMarkup(
+      <MatchResultsPage
+        matches={[
+          {
+            matchId: 502,
+            score: 92,
+            status: "matched",
+            reason: "Kemiripan visual tinggi; Lokasi identik",
+            algorithmVersion: "ai-v1",
+            visualScore: 89.4,
+            modelName: "OpenCLIP/ViT-B-32",
+            matchDetails: {
+              category: 100,
+              title: 40,
+              description: 75,
+              location: 100,
+              date: 90,
+            },
+            myItem: {
+              id: 20,
+              title: "Kunci Motor Honda",
+              type: "lost",
+            },
+            matchedItem: {
+              id: 21,
+              title: "Ditemukan kunci Honda",
+              type: "found",
+            },
+            createdAt: "2026-06-08T10:00:00.000Z",
+          },
+        ]}
+        onOpenReturnVerification={vi.fn()}
+      />,
+    );
+
+    // Header score gauge
+    expect(markup).toContain("92% cocok");
+    expect(markup).toContain("AI Matching");
+
+    // Visual Similarity circular card
+    expect(markup).toContain("Kemiripan Visual (AI)");
+    expect(markup).toContain("Visual Similarity");
+    expect(markup).toContain("89.4%");
+
+    // Detail breakdown cards
+    expect(markup).toContain("Detail Skor");
+    expect(markup).toContain("Kategori");
+    expect(markup).toContain("Judul");
+    expect(markup).toContain("Deskripsi");
+    expect(markup).toContain("Lokasi");
+    expect(markup).toContain("Tanggal");
+
+    // Circular SVG rendering check
+    expect(markup).toContain("<svg");
+    expect(markup).toContain("stroke-dasharray");
+  });
 });

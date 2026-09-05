@@ -39,7 +39,7 @@ import {
 import heroImage from "figma:asset/706763380527f5c21ddaccdcfcc1a4edffb8b3f2.webp";
 import laporHilangImg from "figma:asset/2412be6deea607ec6f8ef7e655eb41ff2289957e.webp";
 import laporTemuanImg from "figma:asset/6e0302b470dfeaee72f713a6f32bccb12ae8fd58.webp";
-import merahBg from "../../assets/merah.webp";
+import card1Img from "../../assets/card2.webp";
 
 interface DashboardProps {
   items: any[];
@@ -185,32 +185,23 @@ export function Dashboard({
           </Card>
 
           {/* Kontak Card */}
-          <Card className="overflow-hidden relative h-80 rounded-sm border-red-200">
+          <Card
+            className="overflow-hidden relative h-80 rounded-sm cursor-pointer group border-red-200"
+            onClick={() => onNavigate?.("contact")}
+          >
             <img
-              src={merahBg}
-              alt=""
-              aria-hidden="true"
-              className="absolute inset-0 h-full w-full object-cover"
+              src={card1Img}
+              alt="Lapor Kehilangan Darurat"
+              className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-80"
             />
-            <div className="absolute inset-0 bg-black/25" />
-            <CardContent className="relative z-10 p-6 h-full flex flex-col justify-between">
-              <div className="flex items-start space-x-3">
-                <div className="p-2 rounded-sm bg-white/15 backdrop-blur-sm">
-                  <Phone className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-white font-semibold mb-1">
-                    Lapor Kehilangan Darurat
-                  </h3>
-                  <p className="text-white/90 text-xs">
-                    Untuk barang penting seperti KTM, SIM, atau
-                    dokumen
-                  </p>
-                </div>
-              </div>
+            <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/20 pointer-events-none" />
+            <CardContent className="relative z-10 p-6 h-full flex flex-col justify-end">
               <Button
-                onClick={() => onNavigate?.("contact")}
-                className="bg-red-700 hover:bg-black hover:text-white  text-xs px-3 py-2 h-auto rounded-sm w-full text-white"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNavigate?.("contact");
+                }}
+                className="bg-red-700 hover:bg-black hover:text-white text-xs px-3 py-2 h-auto rounded-sm w-full text-white shadow-md"
                 variant="destructive"
               >
                 Hubungi Security

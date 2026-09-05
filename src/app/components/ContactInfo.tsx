@@ -254,51 +254,6 @@ export function ContactInfo() {
         </div>
       </div>
 
-      {/* Emergency Contact */}
-      <Card className="relative overflow-hidden border-red-200 rounded-sm">
-        <img
-          src={merahBg}
-          alt=""
-          aria-hidden="true"
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-        <div className="absolute inset-0 bg-black/25" />
-        <CardHeader>
-          <CardTitle className="relative z-10 flex items-center text-white">
-            <span className="mr-2 rounded-sm bg-white/15 p-2 backdrop-blur-sm">
-              <Shield className="w-5 h-5" />
-            </span>
-            Kontak Darurat
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="relative z-10"> 
-          <div className="space-y-3">
-            <p className="text-sm text-white/90">
-              Untuk kehilangan dokumen penting atau situasi
-              mendesak:
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div className="flex items-center space-x-2">
-                <Phone className="w-4 h-4 text-white" />
-                <span className="font-semibold text-white">
-                  Security UMM 24/7: +62341464318
-                </span>
-              </div>
-              <div className="flex items-center space-x-2">
-              
-              </div>
-            </div>
-            <Button
-              variant="destructive"
-              size="sm"
-              className="rounded-sm bg-red-700 text-white text-xs hover:bg-black hover:text-white"
-            >
-              Hubungi Sekarang
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* FAQ */}
       <div className="space-y-4">
         <h2 className="text-xl font-semibold">

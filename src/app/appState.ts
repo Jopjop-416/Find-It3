@@ -77,6 +77,8 @@ export type MatchScoreResult = {
   score: number;
   status: "candidate" | "matched" | "rejected";
   reason: string;
+  /** Algorithm version tag for research comparison. */
+  algorithmVersion?: string;
 };
 
 export type AutoMatchCandidate = {
@@ -95,6 +97,12 @@ export type UserMatchSummary = {
   myItem: Record<string, unknown>;
   matchedItem: Record<string, unknown>;
   createdAt: string;
+  // AI matching fields (null for legacy matches)
+  visualScore: number | null;
+  attributeScore: number | null;
+  matchDetails: Record<string, unknown> | null;
+  algorithmVersion: string | null;
+  modelName: string | null;
 };
 
 export function buildDerivedMatchNotifications(
@@ -273,7 +281,17 @@ function calculateDateScore(leftValue: unknown, rightValue: unknown): number {
   return 0;
 }
 
-export function calculateMatchScore(
+/**
+ * LEGACY rule-based matching algorithm.
+ *
+ * Preserved for:
+ * 1. Fallback when AI service is unavailable
+ * 2. Research comparison (Legacy vs AI)
+ * 3. Items without image embeddings
+ *
+ * DO NOT delete — this is the baseline algorithm for the research paper.
+ */
+export function calculateLegacyMatchScore(
   sourceItem: Record<string, unknown>,
   candidateItem: Record<string, unknown>,
 ): MatchScoreResult {
@@ -327,6 +345,7 @@ export function calculateMatchScore(
       score,
       status: "matched",
       reason: reasonParts.join(", "),
+      algorithmVersion: "legacy-v1",
     };
   }
 
@@ -335,6 +354,7 @@ export function calculateMatchScore(
       score,
       status: "candidate",
       reason: reasonParts.join(", "),
+      algorithmVersion: "legacy-v1",
     };
   }
 
@@ -342,8 +362,15 @@ export function calculateMatchScore(
     score,
     status: "rejected",
     reason: reasonParts.join(", "),
+    algorithmVersion: "legacy-v1",
   };
 }
+
+/**
+ * Alias kept for backward compatibility with tests and any external callers.
+ * @deprecated Use calculateLegacyMatchScore() directly.
+ */
+export const calculateMatchScore = calculateLegacyMatchScore;
 
 export function findAutoMatchCandidates(
   sourceItem: Record<string, unknown>,
@@ -370,7 +397,7 @@ export function findAutoMatchCandidates(
       );
     })
     .map((candidate) => {
-      const result = calculateMatchScore(sourceItem, candidate);
+      const result = calculateLegacyMatchScore(sourceItem, candidate);
 
       return {
         sourceItemId: typeof sourceItem.id === "number" ? sourceItem.id : Number(sourceItem.id),
@@ -429,6 +456,22 @@ export function buildUserMatchSummaries(
         return null;
       }
 
+      // Read AI matching fields (null-safe for legacy matches)
+      const visualScore =
+        typeof match.visual_score === "number" ? match.visual_score
+        : match.visual_score != null ? Number(match.visual_score)
+        : null;
+
+      const attributeScore =
+        typeof match.attribute_score === "number" ? match.attribute_score
+        : match.attribute_score != null ? Number(match.attribute_score)
+        : null;
+
+      const matchDetails =
+        match.match_details != null && typeof match.match_details === "object"
+          ? (match.match_details as Record<string, unknown>)
+          : null;
+
       return {
         matchId: typeof match.id === "number" ? match.id : Number(match.id),
         score: typeof match.score === "number" ? match.score : Number(match.score),
@@ -437,6 +480,11 @@ export function buildUserMatchSummaries(
         myItem: currentUserOwnsLost ? lostItem : foundItem,
         matchedItem: currentUserOwnsLost ? foundItem : lostItem,
         createdAt: typeof match.created_at === "string" ? match.created_at : "",
+        visualScore,
+        attributeScore,
+        matchDetails,
+        algorithmVersion: typeof match.algorithm_version === "string" ? match.algorithm_version : null,
+        modelName: typeof match.model_name === "string" ? match.model_name : null,
       };
     })
     .filter((entry): entry is UserMatchSummary => Boolean(entry))

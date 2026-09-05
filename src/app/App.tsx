@@ -43,6 +43,9 @@ import {
 } from './appState';
 import { getPasswordRecoveryUrlState } from '../lib/authRecovery';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import { generateImageEmbedding } from '../lib/aiService';
+import { calculateAIMatchScore } from './matching/aiMatching';
+import { ALGORITHM_VERSION, LEGACY_ALGORITHM_VERSION, MATCH_THRESHOLDS } from './matching/types';
 
 const mockItemsData = [
     {
@@ -652,102 +655,383 @@ export default function App() {
     });
 
     if (insertedItem) {
-      await runAutoMatching(insertedItem);
+      // Run AI matching in background — do NOT await, so UI responds immediately
+      void runAutoMatching(insertedItem);
     }
 
     return true;
   };
 
+  /**
+   * AI-BASED AUTO MATCHING (ai-v1)
+   *
+   * Flow:
+   * 1. Try to upload image to Supabase Storage & generate CLIP embedding
+   * 2. If embedding available: use match_items_by_embedding() RPC (vector search)
+   *    → apply calculateAIMatchScore() (visual + attribute)
+   * 3. If embedding NOT available: fall back to legacy token-overlap matching
+   * 4. Save match results with full metadata to item_matches
+   * 5. Create notifications for both parties
+   *
+   * This function runs asynchronously in the background after item insertion.
+   * AI failures do NOT prevent items from being saved.
+   */
   const runAutoMatching = async (insertedItem: any) => {
     if (!supabase) {
       return;
     }
 
     const oppositeType = insertedItem.type === 'lost' ? 'found' : 'lost';
-    const { data: candidateItems, error: candidateItemsError } = await supabase
+
+    // ── Step 1: Generate image embedding ────────────────────────────────────
+    let embedding: number[] | null = null;
+    let imageUrlForEmbedding: string | null = null;
+    let modelName = 'unknown';
+
+    // Determine image source: prefer Supabase Storage URL, fall back to existing image field
+    const rawImage = insertedItem.image as string | undefined;
+    if (rawImage && rawImage.trim()) {
+      try {
+        if (rawImage.startsWith('http://') || rawImage.startsWith('https://')) {
+          // Already a URL (e.g. already uploaded to Supabase Storage)
+          imageUrlForEmbedding = rawImage;
+        } else if (rawImage.startsWith('data:')) {
+          // base64 data URI — upload to Supabase Storage first
+          const fileName = `item-${insertedItem.id}-${Date.now()}.jpg`;
+          const base64Data = rawImage.split(',')[1];
+          const binary = atob(base64Data);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+          }
+          const blob = new Blob([bytes], { type: 'image/jpeg' });
+
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('item-images')
+            .upload(fileName, blob, {
+              contentType: 'image/jpeg',
+              upsert: false,
+            });
+
+          if (uploadError) {
+            console.warn('[runAutoMatching] Failed to upload image to storage:', uploadError.message);
+            // Fall back to using base64 directly with AI service
+            imageUrlForEmbedding = rawImage;
+          } else {
+            const { data: urlData } = supabase.storage
+              .from('item-images')
+              .getPublicUrl(uploadData.path);
+
+            imageUrlForEmbedding = urlData.publicUrl;
+
+            // Update item's image field with the storage URL
+            await supabase
+              .from('items')
+              .update({ image: imageUrlForEmbedding })
+              .eq('id', insertedItem.id);
+
+            setItems((currentItems) =>
+              currentItems.map((item) =>
+                item.id === insertedItem.id
+                  ? { ...item, image: imageUrlForEmbedding }
+                  : item,
+              ),
+            );
+          }
+        }
+
+        if (imageUrlForEmbedding) {
+          embedding = await generateImageEmbedding(imageUrlForEmbedding);
+
+          if (embedding) {
+            // Probe model name from AI service (stored in health response cache)
+            // We use a conservative model name constant
+            modelName = 'ViT-B-32/openai';
+
+            // Save embedding to database
+            await supabase
+              .from('items')
+              .update({
+                image_embedding: JSON.stringify(embedding),
+                embedding_model: modelName,
+                embedding_version: ALGORITHM_VERSION,
+              })
+              .eq('id', insertedItem.id);
+          }
+        }
+      } catch (embeddingError) {
+        console.warn('[runAutoMatching] Embedding generation failed (non-fatal):', embeddingError);
+        embedding = null;
+      }
+    }
+
+    // ── Step 2: Retrieve candidates ───────────────────────────────────────────
+    let candidateItems: any[] = [];
+    let vectorCandidateIds = new Set<number>();
+
+    if (embedding && embedding.length > 0) {
+      // AI PATH: Use vector similarity search (pgvector RPC)
+      const { data: vectorCandidates, error: rpcError } = await (supabase as any)
+        .rpc('match_items_by_embedding', {
+          query_embedding: JSON.stringify(embedding),
+          match_type: oppositeType,
+          match_category: insertedItem.category || '',
+          match_threshold: 0.2,
+          match_count: 20,
+        });
+
+      if (!rpcError && vectorCandidates) {
+        vectorCandidateIds = new Set(vectorCandidates.map((c: any) => c.id));
+      } else {
+        console.warn('[runAutoMatching] Vector search RPC failed:', rpcError?.message);
+      }
+    }
+
+    // Always fetch recent items as a baseline for legacy/fallback matching
+    const { data: recentCandidates, error: recentError } = await supabase
       .from('items')
       .select('*')
       .eq('type', oppositeType)
       .neq('id', insertedItem.id)
-      .order('id', { ascending: false });
+      .in('status', ['active', 'available'])
+      .order('id', { ascending: false })
+      .limit(30);
+    
+    if (recentError) {
+      console.error('[runAutoMatching] Error fetching recent candidates:', recentError);
+    }
 
-    if (candidateItemsError) {
-      console.error('Error fetching match candidates:', candidateItemsError);
+    // Combine vector candidates and recent candidates
+    const allCandidateIds = new Set<number>();
+    
+    // Add recent candidates first
+    for (const c of (recentCandidates ?? [])) {
+      allCandidateIds.add(c.id);
+      candidateItems.push(c);
+    }
+
+    // Fetch full data for vector candidates that aren't already in recent candidates
+    const missingVectorIds = Array.from(vectorCandidateIds).filter(id => !allCandidateIds.has(id));
+    if (missingVectorIds.length > 0) {
+      const { data: missingFullCandidates } = await supabase
+        .from('items')
+        .select('*')
+        .in('id', missingVectorIds)
+        .neq('id', insertedItem.id);
+        
+      for (const c of (missingFullCandidates ?? [])) {
+        candidateItems.push(c);
+      }
+    }
+
+    if (candidateItems.length === 0) {
       return;
     }
 
-    const matchedCandidates = findAutoMatchCandidates(insertedItem, candidateItems ?? [])
-      .filter((candidate) => candidate.scoreStatus === 'matched');
+    // ── Step 3: Score candidates ──────────────────────────────────────────────
+    const matchResults: Array<{
+      matchedItem: any;
+      lostItemId: number;
+      foundItemId: number;
+      score: number;
+      visualScore: number | null;
+      attributeScore: number | null;
+      status: string;
+      reason: string;
+      matchDetails: Record<string, unknown> | null;
+      algorithmVersion: string;
+      modelName: string;
+    }> = [];
 
-    if (matchedCandidates.length === 0) {
-      return;
-    }
-
-    for (const candidate of matchedCandidates) {
-      const matchedItem = (candidateItems ?? []).find((item) => Number(item.id) === candidate.matchedItemId);
-      if (!matchedItem) {
+    for (const candidate of candidateItems) {
+      // Skip items from the same reporter
+      if (
+        insertedItem.reporter_id &&
+        candidate.reporter_id &&
+        insertedItem.reporter_id === candidate.reporter_id
+      ) {
         continue;
       }
 
-      const lostItemId = insertedItem.type === 'lost' ? insertedItem.id : matchedItem.id;
-      const foundItemId = insertedItem.type === 'found' ? insertedItem.id : matchedItem.id;
+      // Check if BOTH items have embeddings to run AI matching
+      let candidateEmbedding: number[] | null = null;
+      if (candidate.image_embedding) {
+        if (Array.isArray(candidate.image_embedding)) {
+          candidateEmbedding = candidate.image_embedding;
+        } else if (typeof candidate.image_embedding === 'string') {
+          try {
+            candidateEmbedding = JSON.parse(candidate.image_embedding);
+          } catch {
+            candidateEmbedding = null;
+          }
+        }
+      }
+
+      if (embedding && candidateEmbedding && candidateEmbedding.length === embedding.length) {
+        // ── AI SCORING ─────────────────────────────────────────────────────
+        // Compute cosine similarity client-side (embeddings are L2-normalized)
+        let dot = 0;
+        for (let i = 0; i < embedding.length; i++) {
+          dot += embedding[i] * candidateEmbedding[i];
+        }
+        const visualSimilarityPercent = Math.max(0, dot) * 100;
+
+        const aiResult = calculateAIMatchScore(
+          insertedItem,
+          candidate,
+          visualSimilarityPercent,
+          modelName,
+        );
+
+        if (aiResult) {
+          const lostItemId = insertedItem.type === 'lost' ? insertedItem.id : candidate.id;
+          const foundItemId = insertedItem.type === 'found' ? insertedItem.id : candidate.id;
+
+          matchResults.push({
+            matchedItem: candidate,
+            lostItemId,
+            foundItemId,
+            score: Math.round(aiResult.finalScore),
+            visualScore: aiResult.visualScore,
+            attributeScore: aiResult.attributeScore,
+            status: aiResult.status,
+            reason: aiResult.reason.join('; '),
+            matchDetails: aiResult.breakdown as unknown as Record<string, unknown>,
+            algorithmVersion: ALGORITHM_VERSION,
+            modelName,
+          });
+          continue; // Successfully scored with AI, skip legacy
+        }
+      } 
+      
+      // ── LEGACY SCORING (Fallback) ─────────────────────────────────────────
+      // Runs if either item is missing an embedding, OR if AI result was rejected (e.g. low visual score but might be a text match)
+      const legacyCandidates = findAutoMatchCandidates(insertedItem, [candidate]);
+      if (legacyCandidates.length > 0) {
+        const legacyResult = legacyCandidates[0];
+        const lostItemId = insertedItem.type === 'lost' ? insertedItem.id : candidate.id;
+        const foundItemId = insertedItem.type === 'found' ? insertedItem.id : candidate.id;
+
+        // If it was already in matchResults (e.g. aiResult was candidate, but legacy is matched), 
+        // we might want to keep the better one. But since we 'continue' above on AI success,
+        // we only reach here if AI rejected it, or if embeddings are missing.
+        matchResults.push({
+          matchedItem: candidate,
+          lostItemId,
+          foundItemId,
+          score: legacyResult.score,
+          visualScore: null,
+          attributeScore: null,
+          status: legacyResult.scoreStatus,
+          reason: legacyResult.reason,
+          matchDetails: null,
+          algorithmVersion: LEGACY_ALGORITHM_VERSION,
+          modelName: 'none',
+        });
+      }
+    }
+
+    // ── Step 4: Save matches + notifications ──────────────────────────────────
+    const strongMatches = matchResults.filter(
+      (r) => r.status === 'matched' && r.score >= MATCH_THRESHOLDS.matched,
+    );
+    const candidateMatches = matchResults.filter(
+      (r) => r.status === 'candidate',
+    );
+    const allMatches = [...strongMatches, ...candidateMatches];
+
+    for (const result of allMatches) {
+      const upsertPayload: Record<string, unknown> = {
+        lost_item_id: result.lostItemId,
+        found_item_id: result.foundItemId,
+        score: result.score,
+        status: result.status,
+        match_reason: result.reason,
+        algorithm_version: result.algorithmVersion,
+        model_name: result.modelName,
+      };
+
+      if (result.visualScore !== null) {
+        upsertPayload.visual_score = result.visualScore;
+      }
+      if (result.attributeScore !== null) {
+        upsertPayload.attribute_score = result.attributeScore;
+      }
+      if (result.matchDetails !== null) {
+        upsertPayload.match_details = result.matchDetails;
+      }
 
       const { error: insertMatchError } = await supabase
         .from('item_matches')
-        .upsert([{
-          lost_item_id: lostItemId,
-          found_item_id: foundItemId,
-          score: candidate.score,
-          status: 'matched',
-          match_reason: candidate.reason,
-        }], { onConflict: 'lost_item_id,found_item_id' });
+        .upsert([upsertPayload], { onConflict: 'lost_item_id,found_item_id' });
 
       if (insertMatchError) {
-        console.error('Error saving item match:', insertMatchError);
+        console.error('[runAutoMatching] Error saving item match:', insertMatchError);
         continue;
       }
 
       setItemMatches((currentMatches) => {
         const nextMatch = {
-          id: Date.now() + Number(matchedItem.id),
-          lost_item_id: lostItemId,
-          found_item_id: foundItemId,
-          score: candidate.score,
-          status: 'matched',
-          match_reason: candidate.reason,
+          id: Date.now() + Number(result.matchedItem.id),
+          lost_item_id: result.lostItemId,
+          found_item_id: result.foundItemId,
+          score: result.score,
+          status: result.status,
+          match_reason: result.reason,
+          visual_score: result.visualScore,
+          attribute_score: result.attributeScore,
+          match_details: result.matchDetails,
+          algorithm_version: result.algorithmVersion,
+          model_name: result.modelName,
           created_at: new Date().toISOString(),
         };
 
-        const withoutDuplicate = currentMatches.filter((entry) => !(
-          Number(entry.lost_item_id) === lostItemId &&
-          Number(entry.found_item_id) === foundItemId
-        ));
+        const withoutDuplicate = currentMatches.filter(
+          (entry) => !(
+            Number(entry.lost_item_id) === result.lostItemId &&
+            Number(entry.found_item_id) === result.foundItemId
+          ),
+        );
 
         return [nextMatch, ...withoutDuplicate];
       });
 
-      await createNotification({
-        userId: insertedItem.reporter_id,
-        userEmail: insertedItem.reporter_email,
-        message: buildAutoMatchNotificationMessage(insertedItem.type, insertedItem.title, candidate.score),
-        type: 'match',
-        metadata: {
-          targetView: 'match-results',
-          itemId: insertedItem.id,
-        },
-      });
-
-      if (matchedItem.reporter_id && matchedItem.reporter_id !== insertedItem.reporter_id) {
+      // Only send notifications for strong matches
+      if (result.status === 'matched') {
         await createNotification({
-          userId: matchedItem.reporter_id,
-          userEmail: matchedItem.reporter_email,
-          message: buildAutoMatchNotificationMessage(matchedItem.type, matchedItem.title, candidate.score),
+          userId: insertedItem.reporter_id,
+          userEmail: insertedItem.reporter_email,
+          message: buildAutoMatchNotificationMessage(
+            insertedItem.type,
+            insertedItem.title,
+            result.score,
+          ),
           type: 'match',
           metadata: {
             targetView: 'match-results',
-            itemId: matchedItem.id,
+            itemId: insertedItem.id,
           },
         });
+
+        if (
+          result.matchedItem.reporter_id &&
+          result.matchedItem.reporter_id !== insertedItem.reporter_id
+        ) {
+          await createNotification({
+            userId: result.matchedItem.reporter_id,
+            userEmail: result.matchedItem.reporter_email,
+            message: buildAutoMatchNotificationMessage(
+              result.matchedItem.type,
+              result.matchedItem.title,
+              result.score,
+            ),
+            type: 'match',
+            metadata: {
+              targetView: 'match-results',
+              itemId: result.matchedItem.id,
+            },
+          });
+        }
       }
     }
   };
