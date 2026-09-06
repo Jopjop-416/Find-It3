@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { MatchResultsPage } from "./MatchResultsPage";
 
 describe("MatchResultsPage", () => {
-  it("renders match summaries and highlights the selected match", () => {
+  it("renders match summaries with ItemCards, badges, big score, and highlights the selected match", () => {
     const markup = renderToStaticMarkup(
       <MatchResultsPage
         matches={[
@@ -50,14 +50,45 @@ describe("MatchResultsPage", () => {
       />,
     );
 
+    // Page title and 2-column layout
     expect(markup).toContain("Kemungkinan Kecocokan");
-    expect(markup).toContain("86% cocok");
-    expect(markup).toContain("border border-orange-500");
-    expect(markup).not.toContain("border-l-4");
+    expect(markup).toContain("grid-cols-1 lg:grid-cols-2");
+
+    // Top ItemCards with titles and banners
+    expect(markup).toContain("Laporan Anda");
+    expect(markup).toContain("Barang Temuan");
+    expect(markup).toContain("Dompet coklat");
     expect(markup).toContain("Dompet kulit warna coklat");
+    expect(markup).toContain("Hilang");
+    expect(markup).toContain("Ditemukan");
+
+    // Badges
+    expect(markup).toContain("86% cocok");
+    expect(markup).toContain("✓ Kecocokan Kuat");
+
+    // Score and headline
+    expect(markup).toContain("86");
+    expect(markup).toContain("Sangat mungkin barang yang sama");
+
+    // Assessment breakdown
+    expect(markup).toContain("Rincian penilaian");
+    expect(markup).toContain("Lokasi kejadian");
+    expect(markup).toContain("Tanggal laporan");
+    expect(markup).toContain("Kategori barang");
+    expect(markup).toContain("Deskripsi barang");
+    expect(markup).toContain("Judul barang");
+
+    // Collapsibles must NOT be present
+    expect(markup).not.toContain("Tentang skor ini");
+    expect(markup).not.toContain("Lihat foto &amp; detail kedua barang");
+
+    // Selected state and bottom action buttons
+    expect(markup).toContain("border border-orange-500");
+    expect(markup).toContain("Hubungi Pelapor");
+    expect(markup).toContain("Verifikasi Barang Sudah Ditemukan");
   });
 
-  it("renders circular progress gauges for AI visual similarity and score breakdown", () => {
+  it("renders AI visual similarity, horizontal progress bars, and AI Matching badge", () => {
     const markup = renderToStaticMarkup(
       <MatchResultsPage
         matches={[
@@ -93,25 +124,27 @@ describe("MatchResultsPage", () => {
       />,
     );
 
-    // Header score gauge
+    // Badges
     expect(markup).toContain("92% cocok");
     expect(markup).toContain("AI Matching");
 
-    // Visual Similarity circular card
-    expect(markup).toContain("Kemiripan Visual (AI)");
-    expect(markup).toContain("Visual Similarity");
-    expect(markup).toContain("89.4%");
+    // Big score headline
+    expect(markup).toContain("92");
+    expect(markup).toContain("Sangat mungkin barang yang sama");
 
-    // Detail breakdown cards
-    expect(markup).toContain("Detail Skor");
-    expect(markup).toContain("Kategori");
-    expect(markup).toContain("Judul");
-    expect(markup).toContain("Deskripsi");
-    expect(markup).toContain("Lokasi");
-    expect(markup).toContain("Tanggal");
+    // Assessment breakdown with AI photo similarity
+    expect(markup).toContain("Rincian penilaian");
+    expect(markup).toContain("Kemiripan foto");
+    expect(markup).toContain("Foto kedua barang dinilai identik oleh AI.");
+    expect(markup).toContain("89%");
+    expect(markup).toContain("style=\"width:89.4%\"");
 
-    // Circular SVG rendering check
-    expect(markup).toContain("<svg");
-    expect(markup).toContain("stroke-dasharray");
+    // Item titles in ItemCards
+    expect(markup).toContain("Kunci Motor Honda");
+    expect(markup).toContain("Ditemukan kunci Honda");
+
+    // Collapsibles removed
+    expect(markup).not.toContain("Tentang skor ini");
+    expect(markup).not.toContain("Lihat foto &amp; detail kedua barang");
   });
 });

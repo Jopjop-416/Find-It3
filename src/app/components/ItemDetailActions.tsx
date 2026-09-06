@@ -16,6 +16,8 @@ interface ItemDetailActionsProps {
   itemTitle: string;
   showContact?: boolean;
   extraActions?: ExtraAction[];
+  bordered?: boolean;
+  className?: string;
 }
 
 export function ItemDetailActions({
@@ -23,13 +25,24 @@ export function ItemDetailActions({
   itemTitle,
   showContact = true,
   extraActions = [],
+  bordered = true,
+  className = "",
 }: ItemDetailActionsProps) {
   if ((!contact || !showContact) && extraActions.length === 0) {
     return null;
   }
 
   return (
-    <div className="flex flex-col gap-2 border-t pt-4 sm:flex-row">
+    <div
+      className={[
+        "flex flex-col gap-2",
+        bordered ? "border-t pt-4" : "",
+        "sm:flex-row",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       {contact && showContact ? (
         <Button
           variant="outline"

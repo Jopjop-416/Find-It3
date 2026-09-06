@@ -44,4 +44,18 @@ describe("ItemDetailActions", () => {
     expect(markup).not.toContain("Hubungi Pelapor");
     expect(markup).toContain("Verifikasi Barang Sudah Ditemukan");
   });
+
+  it("can disable top border and top padding when bordered is false", () => {
+    const markup = renderToStaticMarkup(
+      <ItemDetailActions
+        contact="08123456789"
+        itemTitle="Dompet coklat"
+        bordered={false}
+      />,
+    );
+
+    expect(markup).not.toContain("border-t");
+    expect(markup).not.toContain("pt-4");
+    expect(markup).toContain("flex flex-col gap-2 sm:flex-row");
+  });
 });
