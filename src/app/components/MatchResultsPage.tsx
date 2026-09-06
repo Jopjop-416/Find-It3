@@ -49,7 +49,7 @@ function AlgorithmBadge({ version }: { version: string | null | undefined }) {
       variant="outline"
       className={`rounded-sm text-xs flex items-center gap-1 px-2 py-0.5 bg-white shadow-xs ${
         isAI
-          ? "border-blue-500 text-blue-600"
+          ? "border-gray-500 text-gray-600"
           : "border-gray-300 text-gray-700"
       }`}
     >

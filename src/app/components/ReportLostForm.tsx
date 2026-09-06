@@ -32,8 +32,10 @@ export function ReportLostForm({
   isLoggedIn,
   userPhone,
 }: ReportLostFormProps) {
+  const canUseLocalStorage = typeof localStorage !== 'undefined';
+
   const [formData, setFormData] = useState(() => {
-    return parseStoredJson(localStorage.getItem('reportLostDraft'), {
+    return parseStoredJson(canUseLocalStorage ? localStorage.getItem('reportLostDraft') : null, {
       title: '',
       category: '',
       description: '',
@@ -47,7 +49,7 @@ export function ReportLostForm({
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(() => {
-    const draft = parseStoredJson(localStorage.getItem('reportLostDraft'), {
+    const draft = parseStoredJson(canUseLocalStorage ? localStorage.getItem('reportLostDraft') : null, {
       image: '',
     });
     return draft.image || null;
@@ -55,8 +57,10 @@ export function ReportLostForm({
 
   // Save draft to localStorage whenever formData changes
   useEffect(() => {
-    localStorage.setItem('reportLostDraft', JSON.stringify(formData));
-  }, [formData]);
+    if (canUseLocalStorage) {
+      localStorage.setItem('reportLostDraft', JSON.stringify(formData));
+    }
+  }, [canUseLocalStorage, formData]);
 
   const categories = [
     'Elektronik',
@@ -106,7 +110,9 @@ export function ReportLostForm({
     // Check if user is logged in
     if (!isLoggedIn) {
       // Save current form data to localStorage
-      localStorage.setItem('reportLostDraft', JSON.stringify(formData));
+      if (canUseLocalStorage) {
+        localStorage.setItem('reportLostDraft', JSON.stringify(formData));
+      }
       // Show toast notification
       setShowLoginToast(true);
       // Redirect to login after delay
@@ -142,7 +148,9 @@ export function ReportLostForm({
     }
 
     // Clear draft and reset form
-    localStorage.removeItem('reportLostDraft');
+    if (canUseLocalStorage) {
+      localStorage.removeItem('reportLostDraft');
+    }
     setFormData({
       title: '',
       category: '',
@@ -170,8 +178,12 @@ export function ReportLostForm({
         const compressedImage = await compressImage(file, 800, 0.7);
         setImagePreview(compressedImage);
         setFormData(prev => ({ ...prev, image: compressedImage }));
+        setValidationError('');
       } catch (error) {
         console.error("Gagal mengkompres gambar:", error);
+        setValidationError('Gagal memproses foto barang.');
+      } finally {
+        e.target.value = '';
       }
     }
   };
@@ -298,40 +310,54 @@ export function ReportLostForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="image">Foto Barang (Opsional)</Label>
-              <div className="space-y-4">
-                {!imagePreview ? (
-                  <div className="border-2 border-dashed border-border rounded-sm p-6 text-center">
-                    <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Upload foto barang jika tersedia
-                    </p>
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="mx-auto max-w-xs rounded-sm"
-                    />
-                  </div>
-                ) : (
-                  <div className="relative">
+              <Label htmlFor="lost-item-photo">Foto Barang (Opsional)</Label>
+              <div className="relative">
+                <label
+                  htmlFor="lost-item-photo"
+                  className="flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-sm border border-dashed border-gray-300 bg-gray-50 px-6 py-8 text-center hover:bg-gray-100 transition-colors"
+                >
+                  {imagePreview ? (
                     <img
                       src={imagePreview}
-                      alt="Preview"
-                      className="w-full h-48 object-cover rounded-sm"
+                      alt="Preview foto barang"
+                      className="max-h-56 rounded-sm object-cover"
                     />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      className="absolute top-2 right-2 rounded-sm"
-                      onClick={removeImage}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
+                  ) : (
+                    <>
+                      <Upload className="mb-3 h-8 w-8 text-gray-400" />
+                      <p className="text-sm font-medium text-gray-700">
+                        Upload foto barang
+                      </p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        JPG, PNG, atau WebP maksimal 2MB
+                      </p>
+                    </>
+                  )}
+                </label>
+                {imagePreview && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="absolute top-2 right-2 rounded-sm shadow-sm"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      removeImage();
+                    }}
+                    title="Hapus foto"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
                 )}
               </div>
+              <input
+                id="lost-item-photo"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageUpload}
+              />
             </div>
 
             <Button 
