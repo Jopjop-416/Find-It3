@@ -4,7 +4,6 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Toast } from './ui/toast';
 import { Bell, CheckCircle, AlertCircle, Info, Trash2 } from 'lucide-react';
-import krImage from '../../assets/kr2.webp';
 import biruPng from '../../assets/biru.png';
 import merahPng from '../../assets/merah.png';
 import hitamPng from '../../assets/hitam.png';
@@ -286,12 +285,7 @@ export function NotificationCenter({ notifications, onMarkAsRead, onDeleteNotifi
       {notifications.length === 0 && (
         <Card className="rounded-sm">
           <CardContent className="p-12 text-center">
-            <img
-              src={krImage}
-              alt="Tidak ada notifikasi"
-              className="mx-auto h-65 w-65 object-contain"
-            />
-            <h3 className="font-semibold mb-2">Belum ada notifikasi</h3>
+            <h3 className="text-lg font-semibold mb-2">Belum ada notifikasi</h3>
             <p className="text-muted-foreground">
               Notifikasi akan muncul ketika ada update terkait laporan Anda atau barang yang cocok ditemukan.
             </p>

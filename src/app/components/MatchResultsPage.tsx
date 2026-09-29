@@ -1,11 +1,12 @@
 import React from "react";
-import { ChevronDown, Cpu, Zap } from "lucide-react";
+import { ChevronDown, Cpu, Zap, LogIn } from "lucide-react";
 
 import type { UserMatchSummary, ItemReturnVerification } from "../appState";
 import { shouldShowContactAction } from "../appState";
 import { ItemDetailActions } from "./ItemDetailActions";
-import { Card } from "./ui/card";
+import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
 import { ItemCard } from "./ItemCard";
 import hijauPng from "../../assets/hijau.png";
 
@@ -16,6 +17,7 @@ interface MatchResultsPageProps {
   selectedMatchId?: number | null;
   onOpenReturnVerification: (itemId: number) => void;
   returnVerifications?: ItemReturnVerification[];
+  onNavigateToLogin?: () => void;
 }
 
 // ── Badges ────────────────────────────────────────────────────────────────────
@@ -436,7 +438,10 @@ export function MatchResultsPage({
   selectedMatchId = null,
   onOpenReturnVerification,
   returnVerifications = [],
+  onNavigateToLogin,
 }: MatchResultsPageProps) {
+  const isGuest = !currentUserEmail && !currentUserId;
+
   return (
     <div className="space-y-6">
       <div>
@@ -448,8 +453,26 @@ export function MatchResultsPage({
 
       {matches.length === 0 ? (
         <Card className="rounded-sm">
-          <CardContent className="p-10 text-center text-sm text-muted-foreground">
-            Belum ada kemungkinan kecocokan untuk laporan Anda.
+          <CardContent className="p-12 text-center">
+            <h3 className="text-lg font-semibold mb-2">
+              Belum ada kemungkinan kecocokan untuk laporan Anda.
+            </h3>
+            <p className="text-muted-foreground max-w-md mx-auto">
+              {isGuest
+                ? "Silakan masuk ke akun Anda untuk melihat kemungkinan kecocokan dari laporan yang Anda buat."
+                : "Kecocokan akan otomatis muncul ketika ada laporan barang hilang atau temuan yang memiliki kesamaan dengan laporan Anda."}
+            </p>
+            {isGuest && onNavigateToLogin && (
+              <div className="mt-4">
+                <Button
+                  onClick={onNavigateToLogin}
+                  className="rounded-sm bg-black text-white hover:bg-gray-800 text-xs inline-flex items-center gap-1.5"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  Masuk ke Akun
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       ) : (

@@ -2017,6 +2017,7 @@ export default function App() {
             selectedMatchId={selectedMatchId}
             onOpenReturnVerification={(itemId) => openMarkFoundReport(itemId, 'match-results')}
             returnVerifications={returnVerifications}
+            onNavigateToLogin={() => setCurrentView('login')}
           />
         )}
 

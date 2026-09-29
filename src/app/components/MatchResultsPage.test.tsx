@@ -147,4 +147,37 @@ describe("MatchResultsPage", () => {
     expect(markup).not.toContain("Tentang skor ini");
     expect(markup).not.toContain("Lihat foto &amp; detail kedua barang");
   });
+
+  it("renders empty state correctly when there are no matches (guest user)", () => {
+    const markup = renderToStaticMarkup(
+      <MatchResultsPage
+        matches={[]}
+        currentUserEmail=""
+        currentUserId=""
+        onOpenReturnVerification={vi.fn()}
+        onNavigateToLogin={vi.fn()}
+      />,
+    );
+
+    expect(markup).toContain("Kemungkinan Kecocokan");
+    expect(markup).toContain("Belum ada kemungkinan kecocokan untuk laporan Anda.");
+    expect(markup).toContain("Silakan masuk ke akun Anda");
+    expect(markup).toContain("Masuk ke Akun");
+  });
+
+  it("renders empty state correctly when there are no matches (logged-in user)", () => {
+    const markup = renderToStaticMarkup(
+      <MatchResultsPage
+        matches={[]}
+        currentUserEmail="user@example.com"
+        currentUserId="user-123"
+        onOpenReturnVerification={vi.fn()}
+      />,
+    );
+
+    expect(markup).toContain("Kemungkinan Kecocokan");
+    expect(markup).toContain("Belum ada kemungkinan kecocokan untuk laporan Anda.");
+    expect(markup).toContain("Kecocokan akan otomatis muncul ketika ada laporan barang hilang atau temuan");
+    expect(markup).not.toContain("Masuk ke Akun");
+  });
 });
