@@ -221,17 +221,7 @@ export function Dashboard({
       </div>
 
       {/* Quick Tips */}
-      <NewsCarousel
-        items={visibleItems}
-        returnVerifications={returnVerifications}
-        onNavigate={onNavigate}
-        canUpdateStatus={canUpdateStatus}
-        currentUserEmail={currentUserEmail}
-        currentUserId={currentUserId}
-        isAdminUser={isAdminUser}
-        onOpenReturnVerification={onOpenReturnVerification}
-        onApproveVerification={onApproveVerification}
-      />
+      <NewsCarousel />
     </div>
   );
 }

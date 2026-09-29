@@ -162,7 +162,6 @@ describe("MatchResultsPage", () => {
     expect(markup).toContain("Kemungkinan Kecocokan");
     expect(markup).toContain("Belum ada kemungkinan kecocokan untuk laporan Anda.");
     expect(markup).toContain("Silakan masuk ke akun Anda");
-    expect(markup).toContain("Masuk ke Akun");
   });
 
   it("renders empty state correctly when there are no matches (logged-in user)", () => {

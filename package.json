@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite",
+    "dev": "concurrently -n \"web,ai\" -c \"cyan,magenta\" \"vite\" \"node scripts/start-ai.js\"",
+    "dev:web": "vite",
+    "dev:ai": "node scripts/start-ai.js",
     "test": "vitest run"
   },
   "dependencies": {
@@ -68,6 +70,7 @@
   "devDependencies": {
     "@tailwindcss/vite": "4.1.12",
     "@vitejs/plugin-react": "4.7.0",
+    "concurrently": "^10.0.5",
     "tailwindcss": "4.1.12",
     "vite": "^6.4.2",
     "vitest": "^4.1.5"
