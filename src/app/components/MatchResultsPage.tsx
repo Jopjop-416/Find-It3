@@ -462,17 +462,6 @@ export function MatchResultsPage({
                 ? "Silakan masuk ke akun Anda untuk melihat kemungkinan kecocokan dari laporan yang Anda buat."
                 : "Kecocokan akan otomatis muncul ketika ada laporan barang hilang atau temuan yang memiliki kesamaan dengan laporan Anda."}
             </p>
-            {isGuest && onNavigateToLogin && (
-              <div className="mt-4">
-                <Button
-                  onClick={onNavigateToLogin}
-                  className="rounded-sm bg-black text-white hover:bg-gray-800 text-xs inline-flex items-center gap-1.5"
-                >
-                  <LogIn className="w-3.5 h-3.5" />
-                  Masuk ke Akun
-                </Button>
-              </div>
-            )}
           </CardContent>
         </Card>
       ) : (
