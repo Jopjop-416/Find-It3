@@ -30,6 +30,8 @@ interface DashboardProps {
   onOpenReturnVerification: (itemId: number) => void;
   onApproveVerification: (itemId: number) => Promise<boolean>;
   returnVerifications: ItemReturnVerification[];
+  onStartEdit?: (item: any) => void;
+  onDeleteItem?: (itemId: number) => Promise<boolean> | void;
 }
 
 export function Dashboard({
@@ -43,6 +45,8 @@ export function Dashboard({
   onOpenReturnVerification,
   onApproveVerification,
   returnVerifications,
+  onStartEdit,
+  onDeleteItem,
 }: DashboardProps) {
   const visibleItems = items.filter(
     (item) => !shouldHideItemFromListings(item, returnVerifications),
@@ -215,6 +219,8 @@ export function Dashboard({
               isAdminUser={isAdminUser}
               onOpenReturnVerification={onOpenReturnVerification}
               onApproveVerification={onApproveVerification}
+              onStartEdit={onStartEdit}
+              onDeleteItem={onDeleteItem}
             />
           ))}
         </div>

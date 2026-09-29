@@ -460,6 +460,10 @@ export function buildUserMatchSummaries(
 ): UserMatchSummary[] {
   return matches
     .map((match) => {
+      if (match.status === "dismissed") {
+        return null;
+      }
+
       const lostItemId = typeof match.lost_item_id === "number" ? match.lost_item_id : Number(match.lost_item_id);
       const foundItemId = typeof match.found_item_id === "number" ? match.found_item_id : Number(match.found_item_id);
       const lostItem = items.find((item) => Number(item.id) === lostItemId);

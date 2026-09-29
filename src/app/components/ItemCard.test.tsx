@@ -178,4 +178,25 @@ describe("ItemCard", () => {
 
     expect(markup).toContain("Tandai Sudah Diambil");
   });
+
+  it("renders unified Edit ButtonGroup with dropdown trigger when viewer is reporter", () => {
+    const onStartEdit = vi.fn();
+    const onDeleteItem = vi.fn();
+    const markup = renderToStaticMarkup(
+      <Dialog>
+        <ItemCardDetail
+          item={sampleLostItem}
+          currentUserEmail="ahmad@student.umm.ac.id"
+          currentUserId="user-1"
+          onStartEdit={onStartEdit}
+          onDeleteItem={onDeleteItem}
+        />
+      </Dialog>,
+    );
+
+    expect(markup).toContain('data-slot="button-group"');
+    expect(markup).toContain("Edit");
+    expect(markup).toContain("text-xs");
+    expect(markup).toContain('aria-label="Opsi Laporan"');
+  });
 });

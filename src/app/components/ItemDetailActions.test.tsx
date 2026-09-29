@@ -20,7 +20,7 @@ describe("ItemDetailActions", () => {
       />,
     );
 
-    expect(markup).toContain("flex flex-col gap-2 border-t pt-4 sm:flex-row");
+    expect(markup).toContain("flex flex-col gap-2.5 sm:gap-3 border-t pt-4 sm:flex-row");
     expect(markup).toContain("h-auto w-full whitespace-normal");
     expect(markup).toContain("whitespace-normal");
   });
@@ -56,6 +56,6 @@ describe("ItemDetailActions", () => {
 
     expect(markup).not.toContain("border-t");
     expect(markup).not.toContain("pt-4");
-    expect(markup).toContain("flex flex-col gap-2 sm:flex-row");
+    expect(markup).toContain("flex flex-col gap-2.5 sm:gap-3 sm:flex-row");
   });
 });

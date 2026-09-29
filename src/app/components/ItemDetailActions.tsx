@@ -18,6 +18,7 @@ interface ItemDetailActionsProps {
   extraActions?: ExtraAction[];
   bordered?: boolean;
   className?: string;
+  children?: React.ReactNode;
 }
 
 export function ItemDetailActions({
@@ -27,17 +28,18 @@ export function ItemDetailActions({
   extraActions = [],
   bordered = true,
   className = "",
+  children,
 }: ItemDetailActionsProps) {
-  if ((!contact || !showContact) && extraActions.length === 0) {
+  if ((!contact || !showContact) && extraActions.length === 0 && !children) {
     return null;
   }
 
   return (
     <div
       className={[
-        "flex flex-col gap-2",
+        "flex flex-col gap-2.5 sm:gap-3",
         bordered ? "border-t pt-4" : "",
-        "sm:flex-row",
+        "sm:flex-row sm:items-center",
         className,
       ]
         .filter(Boolean)
@@ -69,6 +71,8 @@ export function ItemDetailActions({
           {action.label}
         </Button>
       ))}
+
+      {children}
     </div>
   );
 }

@@ -268,6 +268,7 @@ export default function App() {
   const [readDerivedMatchIds, setReadDerivedMatchIds] = useState<number[]>([]);
   const [dismissedDerivedMatchIds, setDismissedDerivedMatchIds] = useState<number[]>([]);
   const [foundReportContext, setFoundReportContext] = useState<FoundReportContext | null>(null);
+  const [editingItem, setEditingItem] = useState<any | null>(null);
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [selectedVerificationItemId, setSelectedVerificationItemId] = useState<number | null>(null);
   const [verificationReturnView, setVerificationReturnView] = useState('dashboard');
@@ -1279,10 +1280,202 @@ export default function App() {
     if (view !== 'report-found' && foundReportContext) {
       setFoundReportContext(null);
     }
+    if (view !== 'report-lost' && view !== 'report-found') {
+      setEditingItem(null);
+    }
     if (view !== 'match-results') {
       setSelectedMatchId(null);
     }
     setCurrentView(view);
+  };
+
+  const handleStartEditItem = (item: any) => {
+    setEditingItem(item);
+    if (item.type === 'lost') {
+      setCurrentView('report-lost');
+    } else {
+      setCurrentView('report-found');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingItem(null);
+    setCurrentView('gallery');
+    setGalleryOwnershipFilter('mine');
+  };
+
+  const handleUpdateItem = async (updatedData: any): Promise<boolean> => {
+    const itemId = updatedData.id;
+    if (!itemId) return false;
+
+    if (!supabase) {
+      setItems((currentItems) =>
+        currentItems.map((item) =>
+          item.id === itemId
+            ? {
+                ...item,
+                ...updatedData,
+              }
+            : item
+        )
+      );
+      setEditingItem(null);
+      setCurrentView('gallery');
+      setGalleryOwnershipFilter('mine');
+      return true;
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      localStorage.setItem('redirectAfterLogin', currentView);
+      setCurrentView('login');
+      return false;
+    }
+
+    const updatePayload: Record<string, any> = {
+      title: updatedData.title,
+      category: updatedData.category,
+      description: updatedData.description,
+      location: updatedData.location,
+      contact: updatedData.contact,
+    };
+
+    if (updatedData.image) {
+      updatePayload.image = updatedData.image;
+    }
+    if (updatedData.date) {
+      updatePayload.date = updatedData.date;
+    }
+
+    const { data, error } = await supabase
+      .from('items')
+      .update(updatePayload)
+      .eq('id', itemId)
+      .select()
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error updating item:', error);
+      alert('Terjadi kesalahan saat memperbarui laporan.');
+      return false;
+    }
+
+    setItems((currentItems) =>
+      currentItems.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              ...updatePayload,
+              ...(data || {}),
+            }
+          : item
+      )
+    );
+
+    await createNotification({
+      userId: userData.id,
+      userEmail: userData.email,
+      message: `Laporan ${updatedData.type === 'lost' ? 'kehilangan' : 'penemuan'} "${updatedData.title}" berhasil diperbarui.`,
+      type: 'info',
+    });
+
+    const targetItem = { ...(items.find((it) => it.id === itemId) || {}), ...updatePayload, ...(data || {}) };
+    void runAutoMatching(targetItem, items.filter((it) => it.id !== itemId));
+
+    setEditingItem(null);
+    setCurrentView('gallery');
+    setGalleryOwnershipFilter('mine');
+    return true;
+  };
+
+  const handleDeleteItem = async (itemId: number): Promise<boolean> => {
+    if (!supabase) {
+      setItems((prev) => prev.filter((item) => Number(item.id) !== Number(itemId)));
+      setItemMatches((prev) =>
+        prev.filter(
+          (m) => Number(m.lost_item_id) !== Number(itemId) && Number(m.found_item_id) !== Number(itemId)
+        )
+      );
+      setReturnVerifications((prev) => prev.filter((v) => Number(v.itemId) !== Number(itemId)));
+      return true;
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      setCurrentView('login');
+      return false;
+    }
+
+    try {
+      await supabase
+        .from('item_return_verifications')
+        .delete()
+        .eq('item_id', itemId);
+
+      await supabase
+        .from('item_matches')
+        .delete()
+        .or(`lost_item_id.eq.${itemId},found_item_id.eq.${itemId}`);
+
+      const { error } = await supabase
+        .from('items')
+        .delete()
+        .eq('id', itemId);
+
+      if (error) {
+        console.error('Error deleting item from Supabase:', error);
+        alert('Gagal menghapus laporan dari database.');
+        return false;
+      }
+
+      setItems((prev) => prev.filter((item) => Number(item.id) !== Number(itemId)));
+      setItemMatches((prev) =>
+        prev.filter(
+          (m) => Number(m.lost_item_id) !== Number(itemId) && Number(m.found_item_id) !== Number(itemId)
+        )
+      );
+      setReturnVerifications((prev) => prev.filter((v) => Number(v.itemId) !== Number(itemId)));
+
+      await createNotification({
+        userId: userData.id,
+        userEmail: userData.email,
+        message: 'Laporan berhasil dihapus.',
+        type: 'info',
+      });
+
+      return true;
+    } catch (err) {
+      console.error('Unexpected error during item deletion:', err);
+      return false;
+    }
+  };
+
+  const handleDismissMatch = async (matchId: number, lostItemId: number, foundItemId: number) => {
+    setItemMatches((prev) =>
+      prev.filter((m) => {
+        const idMatch = Number(m.id) === matchId;
+        const pairMatch =
+          (Number(m.lost_item_id) === lostItemId && Number(m.found_item_id) === foundItemId) ||
+          (Number(m.lost_item_id) === foundItemId && Number(m.found_item_id) === lostItemId);
+        return !idMatch && !pairMatch;
+      })
+    );
+    setDismissedDerivedMatchIds((prev) => (prev.includes(matchId) ? prev : [...prev, matchId]));
+
+    if (supabase) {
+      try {
+        if (matchId > 0) {
+          await supabase.from('item_matches').delete().eq('id', matchId);
+        } else {
+          await supabase
+            .from('item_matches')
+            .delete()
+            .match({ lost_item_id: lostItemId, found_item_id: foundItemId });
+        }
+      } catch (err) {
+        console.warn('Error deleting match from Supabase:', err);
+      }
+    }
   };
 
   const openMatchResults = (matchId?: number | null) => {
@@ -1945,18 +2138,23 @@ export default function App() {
             onOpenReturnVerification={(itemId) => openItemOwnerFollowUp(itemId, 'dashboard')}
             onApproveVerification={handleAdminApproveVerification}
             returnVerifications={returnVerifications}
+            onStartEdit={handleStartEditItem}
+            onDeleteItem={handleDeleteItem}
           />
         )}
 
         {currentView === 'report-lost' && (
           <ReportLostForm
-            onSubmit={addItem}
+            onSubmit={editingItem ? handleUpdateItem : addItem}
             onRequireLogin={() => {
               localStorage.setItem('redirectAfterLogin', 'report-lost');
               setCurrentView('login');
             }}
             isLoggedIn={isLoggedIn}
             userPhone={userData.phone}
+            mode={editingItem ? 'edit' : 'standard'}
+            initialData={editingItem}
+            onCancel={handleCancelEdit}
             onRequireProfileCompletion={() => {
               alert('Lengkapi nomor HP Indonesia di halaman profil terlebih dahulu.');
               setCurrentView('profile');
@@ -1966,15 +2164,17 @@ export default function App() {
 
         {currentView === 'report-found' && (
           <ReportFoundForm
-            onSubmit={addItem}
+            onSubmit={editingItem ? handleUpdateItem : addItem}
             onRequireLogin={() => {
               localStorage.setItem('redirectAfterLogin', 'report-found');
               setCurrentView('login');
             }}
             isLoggedIn={isLoggedIn}
             userPhone={userData.phone}
-            mode={foundReportContext ? 'resolve-lost' : 'standard'}
+            mode={editingItem ? 'edit' : foundReportContext ? 'resolve-lost' : 'standard'}
+            initialData={editingItem}
             presetData={foundReportContext}
+            onCancel={handleCancelEdit}
             onSuccess={foundReportContext ? handleResolvedLostReportSuccess : undefined}
             onRequireProfileCompletion={() => {
               alert('Lengkapi nomor HP Indonesia di halaman profil terlebih dahulu.');
@@ -1996,6 +2196,8 @@ export default function App() {
             onOpenReturnVerification={(itemId) => openItemOwnerFollowUp(itemId, 'gallery')}
             onApproveVerification={handleAdminApproveVerification}
             returnVerifications={returnVerifications}
+            onStartEdit={handleStartEditItem}
+            onDeleteItem={handleDeleteItem}
           />
         )}
 
@@ -2018,6 +2220,7 @@ export default function App() {
             onOpenReturnVerification={(itemId) => openMarkFoundReport(itemId, 'match-results')}
             returnVerifications={returnVerifications}
             onNavigateToLogin={() => setCurrentView('login')}
+            onDismissMatch={handleDismissMatch}
           />
         )}
 

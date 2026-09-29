@@ -1,6 +1,15 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { ButtonGroup } from "./ui/button-group";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +20,7 @@ import {
 } from "./ui/dialog";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { ItemDetailActions } from "./ItemDetailActions";
-import { MapPin, Calendar, User } from "lucide-react";
+import { MapPin, Calendar, User, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import {
   getEffectiveItemStatus,
   getItemStatusLabel,
@@ -36,6 +45,8 @@ export interface ItemCardProps {
   defaultOpen?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  onStartEdit?: (item: any) => void;
+  onDeleteItem?: (itemId: number) => Promise<boolean> | void;
 }
 
 export function ItemCardDetail({
@@ -48,7 +59,12 @@ export function ItemCardDetail({
   onOpenReturnVerification,
   onApproveVerification,
   ownershipFilter = "all",
-}: Omit<ItemCardProps, "open" | "defaultOpen" | "onOpenChange">) {
+  onStartEdit,
+  onDeleteItem,
+  onClose,
+}: Omit<ItemCardProps, "open" | "defaultOpen" | "onOpenChange"> & { onClose?: () => void }) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const verificationRecord = getReturnVerificationForItem(item, returnVerifications);
   const effectiveStatus = getEffectiveItemStatus(item, returnVerifications);
 
@@ -145,51 +161,141 @@ export function ItemCardDetail({
           </div>
         )}
 
-        <ItemDetailActions
-          contact={item.contact}
-          itemTitle={item.title}
-          showContact={shouldShowContactAction(item, currentUserEmail, currentUserId)}
-          extraActions={[
-            ...(canUpdateStatus &&
-            isReporterForItem(item, currentUserEmail, currentUserId) &&
-            effectiveStatus === "active" &&
-            item.type === "lost" &&
-            onOpenReturnVerification
-              ? [
-                  {
-                    key: "verify-found",
-                    label: "Verifikasi Barang Sudah Ditemukan",
-                    onClick: () => onOpenReturnVerification(item.id),
-                  },
-                ]
-              : []),
-            ...(canUpdateStatus &&
-            isReporterForItem(item, currentUserEmail, currentUserId) &&
-            effectiveStatus === "available" &&
-            item.type === "found" &&
-            onOpenReturnVerification
-              ? [
-                  {
-                    key: "mark-claimed",
-                    label: "Tandai Sudah Diambil",
-                    onClick: () => onOpenReturnVerification(item.id),
-                  },
-                ]
-              : []),
-            ...(isAdminUser && effectiveStatus === "pending_verification" && onApproveVerification
-              ? [
-                  {
-                    key: "admin-approve",
-                    label: "Verifikasi Admin",
-                    onClick: () => {
-                      void onApproveVerification(item.id);
+        {showDeleteConfirm ? (
+          <div className="rounded-sm border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/20 space-y-3">
+            <div>
+              <h4 className="font-semibold text-red-800 dark:text-red-300 text-sm">Hapus Laporan Ini?</h4>
+              <p className="text-xs text-red-700 dark:text-red-400 mt-1">
+                Apakah Anda yakin ingin menghapus laporan barang &quot;{item.title}&quot;? Tindakan ini tidak dapat dibatalkan dan semua data terkait akan dihapus.
+              </p>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-sm text-xs"
+                disabled={isDeleting}
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                Batal
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                className="rounded-sm text-xs bg-red-600 hover:bg-red-700 text-white"
+                disabled={isDeleting}
+                onClick={async () => {
+                  setIsDeleting(true);
+                  try {
+                    await onDeleteItem?.(item.id);
+                    onClose?.();
+                  } finally {
+                    setIsDeleting(false);
+                    setShowDeleteConfirm(false);
+                  }
+                }}
+              >
+                {isDeleting ? "Menghapus..." : "Ya, Hapus Laporan"}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <ItemDetailActions
+            contact={item.contact}
+            itemTitle={item.title}
+            showContact={shouldShowContactAction(item, currentUserEmail, currentUserId)}
+            extraActions={[
+              ...(canUpdateStatus &&
+              isReporterForItem(item, currentUserEmail, currentUserId) &&
+              effectiveStatus === "active" &&
+              item.type === "lost" &&
+              onOpenReturnVerification
+                ? [
+                    {
+                      key: "verify-found",
+                      label: "Verifikasi Barang Sudah Ditemukan",
+                      onClick: () => onOpenReturnVerification(item.id),
                     },
-                    className: "bg-black text-white hover:bg-gray-800",
-                  },
-                ]
-              : []),
-          ]}
-        />
+                  ]
+                : []),
+              ...(canUpdateStatus &&
+              isReporterForItem(item, currentUserEmail, currentUserId) &&
+              effectiveStatus === "available" &&
+              item.type === "found" &&
+              onOpenReturnVerification
+                ? [
+                    {
+                      key: "mark-claimed",
+                      label: "Tandai Sudah Diambil",
+                      onClick: () => onOpenReturnVerification(item.id),
+                    },
+                  ]
+                : []),
+              ...(isAdminUser && effectiveStatus === "pending_verification" && onApproveVerification
+                ? [
+                    {
+                      key: "admin-approve",
+                      label: "Verifikasi Admin",
+                      onClick: () => {
+                        void onApproveVerification(item.id);
+                      },
+                      className: "bg-black text-white hover:bg-gray-800",
+                    },
+                  ]
+                : []),
+            ]}
+          >
+            {isReporterForItem(item, currentUserEmail, currentUserId) &&
+              (onStartEdit || onDeleteItem) && (
+                <ButtonGroup className="rounded-sm w-full sm:w-auto">
+                  <Button
+                    variant="outline"
+                    className="h-auto flex-1 sm:flex-initial py-2 px-4 text-center text-xs leading-snug rounded-sm"
+                    onClick={() => {
+                      if (onStartEdit && effectiveStatus !== "completed" && effectiveStatus !== "verified_returned") {
+                        onClose?.();
+                        onStartEdit(item);
+                      }
+                    }}
+                  >
+                    Edit
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-auto py-2 px-3 rounded-sm"
+                        aria-label="Opsi Laporan"
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      sideOffset={8}
+                      className="min-w-[140px] rounded-sm"
+                    >
+                      {onDeleteItem && (
+                        <DropdownMenuGroup>
+                          <DropdownMenuItem
+                            variant="destructive"
+                            className="text-xs font-medium text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30 cursor-pointer"
+                            onClick={() => setShowDeleteConfirm(true)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2 text-red-600" />
+                            Hapus Laporan
+                          </DropdownMenuItem>
+                        </DropdownMenuGroup>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </ButtonGroup>
+              )}
+          </ItemDetailActions>
+        )}
       </div>
     </>
   );
@@ -208,11 +314,23 @@ export function ItemCard({
   defaultOpen,
   open,
   onOpenChange,
+  onStartEdit,
+  onDeleteItem,
 }: ItemCardProps) {
   const effectiveStatus = getEffectiveItemStatus(item, returnVerifications);
+  const [internalOpen, setInternalOpen] = useState(defaultOpen ?? false);
+  const isControlled = open !== undefined;
+  const currentOpen = isControlled ? open : internalOpen;
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!isControlled) {
+      setInternalOpen(newOpen);
+    }
+    onOpenChange?.(newOpen);
+  };
 
   return (
-    <Dialog open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
+    <Dialog open={currentOpen} defaultOpen={defaultOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger className="w-full text-left">
         <Card
           className={`self-start cursor-pointer overflow-hidden rounded-sm gap-0 transition-all duration-500 ease-in-out hover:-translate-y-1 flex flex-col ${
@@ -286,6 +404,9 @@ export function ItemCard({
           onOpenReturnVerification={onOpenReturnVerification}
           onApproveVerification={onApproveVerification}
           ownershipFilter={ownershipFilter}
+          onStartEdit={onStartEdit}
+          onDeleteItem={onDeleteItem}
+          onClose={() => handleOpenChange(false)}
         />
       </DialogContent>
     </Dialog>

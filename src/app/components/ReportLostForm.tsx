@@ -23,6 +23,9 @@ interface ReportLostFormProps {
   onRequireProfileCompletion: () => void;
   isLoggedIn: boolean;
   userPhone: string;
+  mode?: 'standard' | 'edit';
+  initialData?: any;
+  onCancel?: () => void;
 }
 
 export function ReportLostForm({
@@ -31,10 +34,25 @@ export function ReportLostForm({
   onRequireProfileCompletion,
   isLoggedIn,
   userPhone,
+  mode = 'standard',
+  initialData = null,
+  onCancel,
 }: ReportLostFormProps) {
+  const isEditMode = mode === 'edit';
   const canUseLocalStorage = typeof localStorage !== 'undefined';
 
   const [formData, setFormData] = useState(() => {
+    if (isEditMode && initialData) {
+      return {
+        title: initialData.title || '',
+        category: initialData.category || '',
+        description: initialData.description || '',
+        location: initialData.location || '',
+        contact: initialData.contact || '',
+        image: initialData.image || '',
+      };
+    }
+
     return parseStoredJson(canUseLocalStorage ? localStorage.getItem('reportLostDraft') : null, {
       title: '',
       category: '',
@@ -49,18 +67,37 @@ export function ReportLostForm({
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(() => {
+    if (isEditMode && initialData) {
+      return initialData.image || null;
+    }
+
     const draft = parseStoredJson(canUseLocalStorage ? localStorage.getItem('reportLostDraft') : null, {
       image: '',
     });
     return draft.image || null;
   });
 
-  // Save draft to localStorage whenever formData changes
+  // Keep form data synced if initialData changes in edit mode
   useEffect(() => {
-    if (canUseLocalStorage) {
+    if (isEditMode && initialData) {
+      setFormData({
+        title: initialData.title || '',
+        category: initialData.category || '',
+        description: initialData.description || '',
+        location: initialData.location || '',
+        contact: initialData.contact || '',
+        image: initialData.image || '',
+      });
+      setImagePreview(initialData.image || null);
+    }
+  }, [isEditMode, initialData]);
+
+  // Save draft to localStorage whenever formData changes (only in standard mode)
+  useEffect(() => {
+    if (!isEditMode && canUseLocalStorage) {
       localStorage.setItem('reportLostDraft', JSON.stringify(formData));
     }
-  }, [canUseLocalStorage, formData]);
+  }, [canUseLocalStorage, formData, isEditMode]);
 
   const categories = [
     'Elektronik',
@@ -137,9 +174,10 @@ export function ReportLostForm({
 
     const success = await onSubmit({
       ...formData,
+      ...(isEditMode && initialData?.id ? { id: initialData.id } : {}),
       type: 'lost',
       contact: normalizedUserPhone,
-      image: imagePreview || 'https://images.unsplash.com/photo-1661353559006-402f30f9e2a1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsb3N0JTIwcGhvbmUlMjB3YWxsZXQlMjBrZXlzfGVufDF8fHx8MTc1ODY5MDA0Nnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral'
+      image: imagePreview || (isEditMode ? '' : 'https://images.unsplash.com/photo-1661353559006-402f30f9e2a1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsb3N0JTIwcGhvbmUlMjB3YWxsZXQlMjBrZXlzfGVufDF8fHx8MTc1ODY5MDA0Nnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral')
     });
 
     if (!success) {
@@ -147,20 +185,22 @@ export function ReportLostForm({
       return;
     }
 
-    // Clear draft and reset form
-    if (canUseLocalStorage) {
-      localStorage.removeItem('reportLostDraft');
+    if (!isEditMode) {
+      // Clear draft and reset form
+      if (canUseLocalStorage) {
+        localStorage.removeItem('reportLostDraft');
+      }
+      setFormData({
+        title: '',
+        category: '',
+        description: '',
+        location: '',
+        contact: '',
+        image: ''
+      });
+      setImagePreview(null);
+      setShowSuccessToast(true);
     }
-    setFormData({
-      title: '',
-      category: '',
-      description: '',
-      location: '',
-      contact: '',
-      image: ''
-    });
-    setImagePreview(null);
-    setShowSuccessToast(true);
     setIsSubmitting(false);
   };
 
@@ -210,14 +250,16 @@ export function ReportLostForm({
           <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <AlertTriangle className="w-5 h-5 text-destructive" />
-            <span>Laporan Kehilangan Barang</span>
+            <span>{isEditMode ? "Edit Laporan Kehilangan Barang" : "Laporan Kehilangan Barang"}</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Alert className="mb-6 rounded-sm">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              Pastikan informasi yang Anda berikan akurat dan lengkap untuk mempermudah proses pencarian barang.
+              {isEditMode
+                ? "Perbarui informasi atau foto barang kehilangan Anda jika ada data yang perlu dikoreksi."
+                : "Pastikan informasi yang Anda berikan akurat dan lengkap untuk mempermudah proses pencarian barang."}
             </AlertDescription>
           </Alert>
 
@@ -360,13 +402,27 @@ export function ReportLostForm({
               />
             </div>
 
-            <Button 
-              type="submit" 
-              className="w-full rounded-sm" 
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Mengirim Laporan...' : 'Kirim Laporan Kehilangan'}
-            </Button>
+            <div className="flex gap-3 pt-2">
+              {isEditMode && onCancel && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-1/3 rounded-sm"
+                  onClick={onCancel}
+                >
+                  Batal
+                </Button>
+              )}
+              <Button 
+                type="submit" 
+                className={`${isEditMode && onCancel ? 'w-2/3' : 'w-full'} rounded-sm`} 
+                disabled={isSubmitting}
+              >
+                {isSubmitting 
+                  ? (isEditMode ? 'Menyimpan Perubahan...' : 'Mengirim Laporan...') 
+                  : (isEditMode ? 'Simpan Perubahan Laporan' : 'Kirim Laporan Kehilangan')}
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>

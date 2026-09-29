@@ -23,7 +23,7 @@ interface ReportFoundFormProps {
   onRequireProfileCompletion: () => void;
   isLoggedIn: boolean;
   userPhone: string;
-  mode?: 'standard' | 'resolve-lost';
+  mode?: 'standard' | 'resolve-lost' | 'edit';
   presetData?: {
     sourceLostItemId: number;
     title: string;
@@ -32,7 +32,9 @@ interface ReportFoundFormProps {
     location: string;
     image?: string;
   } | null;
+  initialData?: any;
   onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
 export function ReportFoundForm({
@@ -43,13 +45,27 @@ export function ReportFoundForm({
   userPhone,
   mode = 'standard',
   presetData = null,
+  initialData = null,
   onSuccess,
+  onCancel,
 }: ReportFoundFormProps) {
+  const isEditMode = mode === 'edit';
   const isResolveMode = mode === 'resolve-lost' && Boolean(presetData);
-  const draftStorageKey = isResolveMode ? null : 'reportFoundDraft';
+  const draftStorageKey = isResolveMode || isEditMode ? null : 'reportFoundDraft';
   const canUseLocalStorage = typeof window !== 'undefined' && typeof localStorage !== 'undefined';
 
   const [formData, setFormData] = useState(() => {
+    if (isEditMode && initialData) {
+      return {
+        title: initialData.title || '',
+        category: initialData.category || '',
+        description: initialData.description || '',
+        location: initialData.location || '',
+        contact: initialData.contact || '',
+        image: initialData.image || '',
+      };
+    }
+
     if (isResolveMode && presetData) {
       return {
         title: presetData.title,
@@ -75,6 +91,10 @@ export function ReportFoundForm({
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(() => {
+    if (isEditMode && initialData) {
+      return initialData.image || null;
+    }
+
     if (isResolveMode && presetData?.image) {
       return presetData.image;
     }
@@ -91,6 +111,21 @@ export function ReportFoundForm({
       localStorage.setItem(draftStorageKey, JSON.stringify(formData));
     }
   }, [canUseLocalStorage, draftStorageKey, formData]);
+
+  useEffect(() => {
+    if (isEditMode && initialData) {
+      setFormData({
+        title: initialData.title || '',
+        category: initialData.category || '',
+        description: initialData.description || '',
+        location: initialData.location || '',
+        contact: initialData.contact || '',
+        image: initialData.image || '',
+      });
+      setImagePreview(initialData.image || null);
+      setValidationError('');
+    }
+  }, [isEditMode, initialData]);
 
   useEffect(() => {
     if (!isResolveMode || !presetData) {
@@ -189,9 +224,10 @@ export function ReportFoundForm({
 
     const success = await onSubmit({
       ...formData,
+      ...(isEditMode && initialData?.id ? { id: initialData.id } : {}),
       type: 'found',
       contact: normalizedUserPhone,
-      image: imagePreview || 'https://images.unsplash.com/photo-1661353559006-402f30f9e2a1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsb3N0JTIwcGhvbmUlMjB3YWxsZXQlMjBrZXlzfGVufDF8fHx8MTc1ODY5MDA0Nnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
+      image: imagePreview || (isEditMode ? '' : 'https://images.unsplash.com/photo-1661353559006-402f30f9e2a1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsb3N0JTIwcGhvbmUlMjB3YWxsZXQlMjBrZXlzfGVufDF8fHx8MTc1ODY5MDA0Nnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral'),
       autoAcceptReturn: isResolveMode,
       sourceLostItemId: presetData?.sourceLostItemId,
     });
@@ -201,20 +237,22 @@ export function ReportFoundForm({
       return;
     }
 
-    // Clear draft and reset form
-    if (draftStorageKey && canUseLocalStorage) {
-      localStorage.removeItem(draftStorageKey);
+    if (!isEditMode) {
+      // Clear draft and reset form
+      if (draftStorageKey && canUseLocalStorage) {
+        localStorage.removeItem(draftStorageKey);
+      }
+      setFormData({
+        title: '',
+        category: '',
+        description: '',
+        location: '',
+        contact: '',
+        image: ''
+      });
+      setImagePreview(null);
+      setShowSuccessToast(true);
     }
-    setFormData({
-      title: '',
-      category: '',
-      description: '',
-      location: '',
-      contact: '',
-      image: ''
-    });
-    setImagePreview(null);
-    setShowSuccessToast(true);
     setIsSubmitting(false);
     onSuccess?.();
   };
@@ -256,7 +294,7 @@ export function ReportFoundForm({
         onClose={() => setShowLoginToast(false)}
       />
       <Toast
-        message={isResolveMode ? "Barang berhasil ditandai sudah ditemukan" : "Laporan penemuan berhasil disubmit"}
+        message={isEditMode ? "Perubahan laporan berhasil disimpan" : isResolveMode ? "Barang berhasil ditandai sudah ditemukan" : "Laporan penemuan berhasil disubmit"}
         isVisible={showSuccessToast}
         onClose={() => setShowSuccessToast(false)}
       />
@@ -265,14 +303,16 @@ export function ReportFoundForm({
           <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Eye className="w-5 h-5 text-green-600" />
-            <span>{isResolveMode ? "Konfirmasi Barang Sudah Ditemukan" : "Laporan Penemuan Barang"}</span>
+            <span>{isEditMode ? "Edit Laporan Penemuan Barang" : isResolveMode ? "Konfirmasi Barang Sudah Ditemukan" : "Laporan Penemuan Barang"}</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Alert className="mb-6 rounded-sm">
             <MapPin className="h-4 w-4" />
             <AlertDescription>
-              {isResolveMode
+              {isEditMode
+                ? "Perbarui informasi atau foto barang temuan Anda jika ada data yang perlu dikoreksi."
+                : isResolveMode
                 ? "Gunakan formulir ini untuk mengonfirmasi bahwa barang hilang Anda sudah ditemukan. Setelah dikirim, laporan akan langsung dipindahkan ke riwayat tanpa proses pending."
                 : "Terima kasih telah menemukan barang! Silakan laporkan dan serahkan ke security atau pusat informasi terdekat."}
             </AlertDescription>
@@ -417,33 +457,47 @@ export function ReportFoundForm({
               />
             </div>
 
-            <div className="bg-muted p-4 rounded-sm">
-              <h4 className="font-semibold mb-2">Langkah Selanjutnya:</h4>
-              {isResolveMode ? (
-                <ol className="text-sm text-muted-foreground space-y-1">
-                  <li>1. Periksa kembali detail barang yang sudah ditemukan</li>
-                  <li>2. Kirim konfirmasi untuk menutup laporan kehilangan Anda</li>
-                  <li>3. Laporan akan langsung hilang dari daftar publik dan masuk ke Riwayat Anda</li>
-                </ol>
-              ) : (
-                <ol className="text-sm text-muted-foreground space-y-1">
-                  <li>1. Serahkan barang ke security atau pusat informasi terdekat</li>
-                  <li>2. Tunjukkan laporan ini sebagai bukti penemuan</li>
-                  <li>3. Admin akan memverifikasi dan mencocokkan dengan laporan kehilangan</li>
-                  <li>4. Anda akan dihubungi jika ada update terkait barang ini</li>
-                </ol>
-              )}
-            </div>
+            {!isEditMode && (
+              <div className="bg-muted p-4 rounded-sm">
+                <h4 className="font-semibold mb-2">Langkah Selanjutnya:</h4>
+                {isResolveMode ? (
+                  <ol className="text-sm text-muted-foreground space-y-1">
+                    <li>1. Periksa kembali detail barang yang sudah ditemukan</li>
+                    <li>2. Kirim konfirmasi untuk menutup laporan kehilangan Anda</li>
+                    <li>3. Laporan akan langsung hilang dari daftar publik dan masuk ke Riwayat Anda</li>
+                  </ol>
+                ) : (
+                  <ol className="text-sm text-muted-foreground space-y-1">
+                    <li>1. Serahkan barang ke security atau pusat informasi terdekat</li>
+                    <li>2. Tunjukkan laporan ini sebagai bukti penemuan</li>
+                    <li>3. Admin akan memverifikasi dan mencocokkan dengan laporan kehilangan</li>
+                    <li>4. Anda akan dihubungi jika ada update terkait barang ini</li>
+                  </ol>
+                )}
+              </div>
+            )}
 
-            <Button 
-              type="submit" 
-              className="w-full rounded-sm" 
-              disabled={isSubmitting}
-            >
-              {isSubmitting
-                ? (isResolveMode ? 'Mengonfirmasi Barang...' : 'Mengirim Laporan...')
-                : (isResolveMode ? 'Tandai Sudah Ditemukan' : 'Kirim Laporan Penemuan')}
-            </Button>
+            <div className="flex gap-3 pt-2">
+              {isEditMode && onCancel && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-1/3 rounded-sm"
+                  onClick={onCancel}
+                >
+                  Batal
+                </Button>
+              )}
+              <Button 
+                type="submit" 
+                className={`${isEditMode && onCancel ? 'w-2/3' : 'w-full'} rounded-sm`} 
+                disabled={isSubmitting}
+              >
+                {isSubmitting
+                  ? (isEditMode ? 'Menyimpan Perubahan...' : isResolveMode ? 'Mengonfirmasi Barang...' : 'Mengirim Laporan...')
+                  : (isEditMode ? 'Simpan Perubahan Laporan' : isResolveMode ? 'Tandai Sudah Ditemukan' : 'Kirim Laporan Penemuan')}
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>

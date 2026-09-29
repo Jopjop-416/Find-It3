@@ -46,4 +46,34 @@ describe("ReportFoundForm", () => {
     expect(markup).toContain('id="found-item-photo"');
     expect(markup).toContain('for="found-item-photo"');
   });
+
+  it("renders Edit Laporan Penemuan Barang with initial data and action buttons", () => {
+    const onCancel = vi.fn();
+    const markup = renderToStaticMarkup(
+      <ReportFoundForm
+        onSubmit={vi.fn().mockResolvedValue(true)}
+        onRequireLogin={vi.fn()}
+        onRequireProfileCompletion={vi.fn()}
+        isLoggedIn
+        userPhone="08123456789"
+        mode="edit"
+        initialData={{
+          id: 20,
+          title: "Flashdisk Sandisk 64GB",
+          category: "Elektronik",
+          description: "Warna merah hitam ditemukan di lab",
+          location: "Lab Komputer",
+          image: "/sandisk.jpg",
+          date: "2026-06-02",
+        }}
+        onCancel={onCancel}
+      />,
+    );
+
+    expect(markup).toContain("Edit Laporan Penemuan Barang");
+    expect(markup).toContain("Flashdisk Sandisk 64GB");
+    expect(markup).toContain("Warna merah hitam ditemukan di lab");
+    expect(markup).toContain("Batal");
+    expect(markup).toContain("Simpan Perubahan Laporan");
+  });
 });

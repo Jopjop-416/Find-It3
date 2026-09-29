@@ -1,5 +1,5 @@
-import React from "react";
-import { ChevronDown, Cpu, Zap, LogIn } from "lucide-react";
+import React, { useState } from "react";
+import { ChevronDown, Cpu, Zap, LogIn, Trash2 } from "lucide-react";
 
 import type { UserMatchSummary, ItemReturnVerification } from "../appState";
 import { shouldShowContactAction } from "../appState";
@@ -7,6 +7,13 @@ import { ItemDetailActions } from "./ItemDetailActions";
 import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
 import { ItemCard } from "./ItemCard";
 import hijauPng from "../../assets/hijau.png";
 
@@ -18,6 +25,7 @@ interface MatchResultsPageProps {
   onOpenReturnVerification: (itemId: number) => void;
   returnVerifications?: ItemReturnVerification[];
   onNavigateToLogin?: () => void;
+  onDismissMatch?: (matchId: number, lostItemId: number, foundItemId: number) => void;
 }
 
 // ── Badges ────────────────────────────────────────────────────────────────────
@@ -235,6 +243,7 @@ interface MatchCardProps {
   currentUserId?: string;
   onOpenReturnVerification: (itemId: number) => void;
   returnVerifications?: ItemReturnVerification[];
+  onDismissMatch?: (matchId: number, lostItemId: number, foundItemId: number) => void;
 }
 
 function MatchCard({
@@ -244,7 +253,9 @@ function MatchCard({
   currentUserId = "",
   onOpenReturnVerification,
   returnVerifications = [],
+  onDismissMatch,
 }: MatchCardProps) {
+  const [showDismissConfirm, setShowDismissConfirm] = useState(false);
   const myItem = match.myItem;
   const matchedItem = match.matchedItem;
   const showVerifyAction =
@@ -257,10 +268,60 @@ function MatchCard({
 
   return (
     <Card
-      className={`rounded-sm p-5 sm:p-6 bg-white dark:bg-card border transition-shadow shadow-xs flex flex-col space-y-4 ${
+      className={`relative rounded-sm p-5 sm:p-6 bg-white dark:bg-card border transition-shadow shadow-xs flex flex-col space-y-4 ${
         isSelected ? "border border-orange-500 ring-1 ring-orange-500" : "border-border/80 hover:shadow-sm"
       }`}
     >
+      {/* Tombol Tolak Kecocokan (Bukan Barang Saya) */}
+      {onDismissMatch && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowDismissConfirm(true);
+          }}
+          title="Bukan Barang Saya"
+          aria-label="Bukan Barang Saya"
+          className="absolute top-3 right-3 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white text-red-600 shadow-md border border-red-200 transition-all hover:bg-red-50 hover:scale-105 active:scale-95 focus:outline-hidden"
+        >
+          <Trash2 className="h-4 w-4 text-red-600" />
+        </button>
+      )}
+
+      <Dialog open={showDismissConfirm} onOpenChange={setShowDismissConfirm}>
+        <DialogContent className="max-w-md rounded-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="h-5 w-5 text-red-600" />
+              <span>Bukan Barang Anda?</span>
+            </DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin menghapus kecocokan ini? Hasil kecocokan ini tidak akan ditampilkan lagi.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-sm text-xs"
+              onClick={() => setShowDismissConfirm(false)}
+            >
+              Batal
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              className="rounded-sm text-xs bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => {
+                setShowDismissConfirm(false);
+                onDismissMatch(match.matchId, Number(match.myItem.id), Number(match.matchedItem.id));
+              }}
+            >
+              Ya, Bukan Barang Saya
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <div className="space-y-5">
         {/* ── 1. Match Score Highlight Card with hijau.png Background ── */}
         <div className="relative overflow-hidden rounded-sm p-4 sm:p-5 text-center shadow-xs border border-emerald-900/30">
@@ -439,6 +500,7 @@ export function MatchResultsPage({
   onOpenReturnVerification,
   returnVerifications = [],
   onNavigateToLogin,
+  onDismissMatch,
 }: MatchResultsPageProps) {
   const isGuest = !currentUserEmail && !currentUserId;
 
@@ -476,6 +538,7 @@ export function MatchResultsPage({
               currentUserId={currentUserId}
               onOpenReturnVerification={onOpenReturnVerification}
               returnVerifications={returnVerifications}
+              onDismissMatch={onDismissMatch}
             />
           ))}
         </div>

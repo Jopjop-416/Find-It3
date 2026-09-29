@@ -35,6 +35,8 @@ interface ItemGalleryProps {
   onOpenReturnVerification: (itemId: number) => void;
   onApproveVerification: (itemId: number) => Promise<boolean>;
   returnVerifications: ItemReturnVerification[];
+  onStartEdit?: (item: any) => void;
+  onDeleteItem?: (itemId: number) => Promise<boolean> | void;
 }
 
 export function ItemGallery({
@@ -49,6 +51,8 @@ export function ItemGallery({
   onOpenReturnVerification,
   onApproveVerification,
   returnVerifications,
+  onStartEdit,
+  onDeleteItem,
 }: ItemGalleryProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -303,6 +307,8 @@ export function ItemGallery({
             onOpenReturnVerification={onOpenReturnVerification}
             onApproveVerification={onApproveVerification}
             ownershipFilter={ownershipFilter}
+            onStartEdit={onStartEdit}
+            onDeleteItem={onDeleteItem}
           />
         ))}
       </div>
