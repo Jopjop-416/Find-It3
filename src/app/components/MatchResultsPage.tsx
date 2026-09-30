@@ -282,7 +282,7 @@ function MatchCard({
           }}
           title="Bukan Barang Saya"
           aria-label="Bukan Barang Saya"
-          className="absolute top-3 right-3 z-20 flex h-8 w-8 items-center justify-center rounded-full text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors focus:outline-hidden"
+          className="absolute top-3 right-3 z-20 flex h-8 w-8 items-center bg-white justify-center rounded-full text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors focus:outline-hidden"
         >
           <Trash2 className="h-4 w-4 text-red-600" />
         </button>
@@ -346,15 +346,15 @@ function MatchCard({
             {/* Big Match Score, Headline, and Summary Description */}
             <div className="pt-1">
               <div className="inline-flex items-baseline justify-center text-white tracking-tight drop-shadow-xs">
-                <span className="text-4xl sm:text-5xl font-bold leading-none">{Math.round(match.score)}</span>
-                <span className="text-2xl sm:text-2xl font-semibold ml-0.5">%</span>
+                <span className="text-4xl text-[45px] font-semibold leading-none">{Math.round(match.score)}</span>
+                <span className="text-2xl sm:text-xl font-semibold ml-0.5">%</span>
               </div>
 
-              <h3 className="mt-3 text-base sm:text-lg font-normal text-white italic drop-shadow-xs">
+              <h3 className="mt-3 text-base sm:text-md font-normal text-white italic drop-shadow-xs">
                 {headline}
               </h3>
 
-              <p className="mt-2 text-xs sm:text-sm text-white/90 max-w-md mx-auto leading-relaxed px-2 drop-shadow-2xs">
+              <p className="text-xs sm:text-md text-white/90 max-w-md mx-auto leading-relaxed px-2 drop-shadow-2xs">
                 {summaryText}
               </p>
             </div>

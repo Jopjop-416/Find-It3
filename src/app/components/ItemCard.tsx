@@ -283,7 +283,7 @@ export function ItemCardDetail({
                     <DropdownMenuContent
                       align="end"
                       sideOffset={8}
-                      className="min-w-[140px] rounded-sm"
+                      className="min-w-[60px] rounded-sm"
                     >
                       {onDeleteItem && (
                         <DropdownMenuGroup>
@@ -292,8 +292,8 @@ export function ItemCardDetail({
                             className="text-xs font-medium text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30 cursor-pointer"
                             onClick={() => setShowDeleteConfirm(true)}
                           >
-                            <Trash2 className="h-4 w-4 mr-2 text-red-600" />
-                            Hapus Laporan
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                            Hapus
                           </DropdownMenuItem>
                         </DropdownMenuGroup>
                       )}
