@@ -410,7 +410,7 @@ export function ItemCard({
         </Card>
       </DialogTrigger>
 
-      <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto rounded-sm">
+      <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto rounded-sm no-scrollbar">
         <ItemCardDetail
           item={item}
           roleBadge={roleBadge}
