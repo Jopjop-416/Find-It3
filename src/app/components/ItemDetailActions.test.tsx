@@ -58,4 +58,38 @@ describe("ItemDetailActions", () => {
     expect(markup).not.toContain("pt-4");
     expect(markup).toContain("flex flex-col gap-2.5 sm:gap-3 sm:flex-row");
   });
+
+  it("protects contact information when user is not logged in: renders button without wa.me link or phone number", () => {
+    const onNavigateToLogin = vi.fn();
+    const markup = renderToStaticMarkup(
+      <ItemDetailActions
+        contact="08123456789"
+        itemTitle="Dompet coklat"
+        isLoggedIn={false}
+        onNavigateToLogin={onNavigateToLogin}
+      />,
+    );
+
+    // Shows the action button to prompt login
+    expect(markup).toContain("Hubungi Pelapor");
+    // Strictly does NOT render WhatsApp link
+    expect(markup).not.toContain("wa.me");
+    expect(markup).not.toContain("https://");
+    // Strictly does NOT expose phone number in markup
+    expect(markup).not.toContain("08123456789");
+    expect(markup).toContain('type="button"');
+  });
+
+  it("renders a direct WhatsApp link when user is logged in", () => {
+    const markup = renderToStaticMarkup(
+      <ItemDetailActions
+        contact="08123456789"
+        itemTitle="Dompet coklat"
+        isLoggedIn={true}
+      />,
+    );
+
+    expect(markup).toContain("Hubungi Pelapor");
+    expect(markup).toContain("https://wa.me/628123456789");
+  });
 });

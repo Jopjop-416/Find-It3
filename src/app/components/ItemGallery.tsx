@@ -37,6 +37,7 @@ interface ItemGalleryProps {
   returnVerifications: ItemReturnVerification[];
   onStartEdit?: (item: any) => void;
   onDeleteItem?: (itemId: number) => Promise<boolean> | void;
+  onNavigateToLogin?: () => void;
 }
 
 export function ItemGallery({
@@ -53,6 +54,7 @@ export function ItemGallery({
   returnVerifications,
   onStartEdit,
   onDeleteItem,
+  onNavigateToLogin,
 }: ItemGalleryProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -309,6 +311,8 @@ export function ItemGallery({
             ownershipFilter={ownershipFilter}
             onStartEdit={onStartEdit}
             onDeleteItem={onDeleteItem}
+            isLoggedIn={canUpdateStatus || Boolean(currentUserEmail || currentUserId)}
+            onNavigateToLogin={onNavigateToLogin}
           />
         ))}
       </div>

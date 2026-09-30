@@ -48,6 +48,8 @@ export interface ItemCardProps {
   onOpenChange?: (open: boolean) => void;
   onStartEdit?: (item: any) => void;
   onDeleteItem?: (itemId: number) => Promise<boolean> | void;
+  isLoggedIn?: boolean;
+  onNavigateToLogin?: () => void;
 }
 
 export function ItemCardDetail({
@@ -63,6 +65,8 @@ export function ItemCardDetail({
   ownershipFilter = "all",
   onStartEdit,
   onDeleteItem,
+  isLoggedIn,
+  onNavigateToLogin,
   onClose,
 }: Omit<ItemCardProps, "open" | "defaultOpen" | "onOpenChange"> & { onClose?: () => void }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -212,7 +216,17 @@ export function ItemCardDetail({
           <ItemDetailActions
             contact={item.contact}
             itemTitle={item.title}
-            showContact={shouldShowContactAction(item, currentUserEmail, currentUserId)}
+            showContact={shouldShowContactAction(
+              item,
+              currentUserEmail,
+              currentUserId,
+              isLoggedIn ?? Boolean(currentUserEmail || currentUserId),
+            )}
+            isLoggedIn={isLoggedIn ?? Boolean(currentUserEmail || currentUserId)}
+            onNavigateToLogin={() => {
+              onClose?.();
+              onNavigateToLogin?.();
+            }}
             extraActions={[
               ...(canUpdateStatus &&
               isReporterForItem(item, currentUserEmail, currentUserId) &&
@@ -324,6 +338,8 @@ export function ItemCard({
   onOpenChange,
   onStartEdit,
   onDeleteItem,
+  isLoggedIn,
+  onNavigateToLogin,
 }: ItemCardProps) {
   const effectiveStatus = getEffectiveItemStatus(item, returnVerifications);
   const [internalOpen, setInternalOpen] = useState(defaultOpen ?? false);
@@ -424,6 +440,8 @@ export function ItemCard({
           ownershipFilter={ownershipFilter}
           onStartEdit={onStartEdit}
           onDeleteItem={onDeleteItem}
+          isLoggedIn={isLoggedIn}
+          onNavigateToLogin={onNavigateToLogin}
           onClose={() => handleOpenChange(false)}
         />
       </DialogContent>

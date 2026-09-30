@@ -244,6 +244,7 @@ interface MatchCardProps {
   onOpenReturnVerification: (itemId: number) => void;
   returnVerifications?: ItemReturnVerification[];
   onDismissMatch?: (matchId: number, lostItemId: number, foundItemId: number) => void;
+  onNavigateToLogin?: () => void;
 }
 
 function MatchCard({
@@ -254,6 +255,7 @@ function MatchCard({
   onOpenReturnVerification,
   returnVerifications = [],
   onDismissMatch,
+  onNavigateToLogin,
 }: MatchCardProps) {
   const [showDismissConfirm, setShowDismissConfirm] = useState(false);
   const myItem = match.myItem;
@@ -437,6 +439,8 @@ function MatchCard({
               currentUserEmail={currentUserEmail}
               currentUserId={currentUserId}
               onOpenReturnVerification={onOpenReturnVerification}
+              isLoggedIn={Boolean(currentUserEmail || currentUserId)}
+              onNavigateToLogin={onNavigateToLogin}
             />
           </div>
 
@@ -448,6 +452,8 @@ function MatchCard({
               currentUserEmail={currentUserEmail}
               currentUserId={currentUserId}
               onOpenReturnVerification={onOpenReturnVerification}
+              isLoggedIn={Boolean(currentUserEmail || currentUserId)}
+              onNavigateToLogin={onNavigateToLogin}
             />
           </div>
         </div>
@@ -466,7 +472,10 @@ function MatchCard({
               matchedItem,
               currentUserEmail,
               currentUserId,
+              Boolean(currentUserEmail || currentUserId),
             )}
+            isLoggedIn={Boolean(currentUserEmail || currentUserId)}
+            onNavigateToLogin={onNavigateToLogin}
             extraActions={
               showVerifyAction
                 ? [
@@ -535,6 +544,7 @@ export function MatchResultsPage({
               onOpenReturnVerification={onOpenReturnVerification}
               returnVerifications={returnVerifications}
               onDismissMatch={onDismissMatch}
+              onNavigateToLogin={onNavigateToLogin}
             />
           ))}
         </div>

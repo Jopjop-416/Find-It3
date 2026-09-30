@@ -435,12 +435,18 @@ export function shouldShowContactAction(
   item: Record<string, unknown>,
   currentUserEmail?: string,
   currentUserId?: string,
+  isLoggedIn?: boolean,
 ): boolean {
-  if (!item.contact) {
+  if (isReporterForItem(item, currentUserEmail ?? "", currentUserId)) {
     return false;
   }
 
-  return !isReporterForItem(item, currentUserEmail ?? "", currentUserId);
+  const isGuest = isLoggedIn === false || (!currentUserEmail && !currentUserId);
+  if (isGuest) {
+    return true;
+  }
+
+  return Boolean(item.contact);
 }
 
 export function buildAutoMatchNotificationMessage(

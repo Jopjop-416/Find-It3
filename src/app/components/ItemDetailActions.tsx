@@ -19,6 +19,8 @@ interface ItemDetailActionsProps {
   bordered?: boolean;
   className?: string;
   children?: React.ReactNode;
+  isLoggedIn?: boolean;
+  onNavigateToLogin?: () => void;
 }
 
 export function ItemDetailActions({
@@ -29,8 +31,12 @@ export function ItemDetailActions({
   bordered = true,
   className = "",
   children,
+  isLoggedIn = true,
+  onNavigateToLogin,
 }: ItemDetailActionsProps) {
-  if ((!contact || !showContact) && extraActions.length === 0 && !children) {
+  const canShowContact = showContact && (!isLoggedIn || Boolean(contact));
+
+  if (!canShowContact && extraActions.length === 0 && !children) {
     return null;
   }
 
@@ -45,20 +51,33 @@ export function ItemDetailActions({
         .filter(Boolean)
         .join(" ")}
     >
-      {contact && showContact ? (
-        <Button
-          variant="outline"
-          className="h-auto w-full whitespace-normal px-4 py-2.5 text-center leading-snug rounded-sm sm:min-w-0 sm:flex-1"
-          asChild
-        >
-          <a
-            href={buildWhatsAppUrl(contact, itemTitle)}
-            target="_blank"
-            rel="noreferrer"
+      {canShowContact ? (
+        isLoggedIn && contact ? (
+          <Button
+            variant="outline"
+            className="h-auto w-full whitespace-normal px-4 py-2.5 text-center leading-snug rounded-sm sm:min-w-0 sm:flex-1"
+            asChild
+          >
+            <a
+              href={buildWhatsAppUrl(contact, itemTitle)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Hubungi Pelapor
+            </a>
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              onNavigateToLogin?.();
+            }}
+            className="h-auto w-full whitespace-normal px-4 py-2.5 text-center leading-snug rounded-sm sm:min-w-0 sm:flex-1"
           >
             Hubungi Pelapor
-          </a>
-        </Button>
+          </Button>
+        )
       ) : null}
 
       {extraActions.map((action) => (

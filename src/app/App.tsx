@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { Search, Plus, Bell, Home, FileText, Camera, Contact, Menu, X, LogIn, User, LogOut } from 'lucide-react';
 import { Button } from './components/ui/button';
@@ -404,24 +404,43 @@ export default function App() {
     };
   }, []);
 
-  // Ambil data barang dari Supabase saat aplikasi dimuat
-  useEffect(() => {
-    const fetchItems = async () => {
-      if (!supabase) {
+  // Ambil data barang dari Supabase saat aplikasi dimuat atau status login berubah
+  const fetchItems = useCallback(async () => {
+    if (!supabase) {
+      if (!isLoggedIn) {
+        setItems(mockItemsData.map(({ contact, ...rest }) => rest as any));
+      } else {
         setItems(mockItemsData);
-        return;
       }
+      return;
+    }
 
-      const { data, error } = await supabase
-        .from('items')
-        .select('*')
-        .order('id', { ascending: false });
-      
-      if (error) console.error('Error fetching items:', error);
-      else if (data) setItems(data);
-    };
+    const safeColumns =
+      'id, title, category, description, location, image, type, status, date, reporter_id, reporter_name, reporter_email, created_at, updated_at';
+    const selectQuery = isLoggedIn ? `${safeColumns}, contact` : safeColumns;
+
+    const { data, error } = await supabase
+      .from('items')
+      .select(selectQuery)
+      .order('id', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching items:', error);
+    } else if (data) {
+      setItems(data);
+    }
+  }, [isLoggedIn]);
+
+  useEffect(() => {
     fetchItems();
-  }, []);
+  }, [fetchItems]);
+
+  const handleRequireLoginToContact = (originView = 'gallery') => {
+    localStorage.setItem('redirectAfterLogin', originView);
+    setAuthToastMessage('Silakan masuk terlebih dahulu untuk menghubungi pelapor.');
+    setShowAuthToast(true);
+    navigateToView('login');
+  };
 
   // Save notifications to localStorage
   useEffect(() => {
@@ -2140,6 +2159,7 @@ export default function App() {
             returnVerifications={returnVerifications}
             onStartEdit={handleStartEditItem}
             onDeleteItem={handleDeleteItem}
+            onNavigateToLogin={() => handleRequireLoginToContact('dashboard')}
           />
         )}
 
@@ -2198,6 +2218,7 @@ export default function App() {
             returnVerifications={returnVerifications}
             onStartEdit={handleStartEditItem}
             onDeleteItem={handleDeleteItem}
+            onNavigateToLogin={() => handleRequireLoginToContact('gallery')}
           />
         )}
 
@@ -2219,7 +2240,7 @@ export default function App() {
             selectedMatchId={selectedMatchId}
             onOpenReturnVerification={(itemId) => openMarkFoundReport(itemId, 'match-results')}
             returnVerifications={returnVerifications}
-            onNavigateToLogin={() => setCurrentView('login')}
+            onNavigateToLogin={() => handleRequireLoginToContact('match-results')}
             onDismissMatch={handleDismissMatch}
           />
         )}
