@@ -102,7 +102,7 @@ export function ContactInfo() {
                     }
                     className={
                       contact.type === "primary"
-                        ? "rounded-sm"
+                        ? "rounded-[2px]"
                         : "rounded-[2px]"
                     }
                   >

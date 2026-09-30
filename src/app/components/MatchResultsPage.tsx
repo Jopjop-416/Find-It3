@@ -429,12 +429,10 @@ function MatchCard({
 
         {/* ── 3. Comparison Items Cards: Laporan Anda & Barang Hilang/Temuan ── */}
         <div className="grid grid-cols-2 gap-3 !mt-2 pt-0">
-          <div className="space-y-4 flex flex-col min-w-0">
-            <div className="w-full text-center py-1.5 px-2 rounded-sm bg-black text-xs sm:text-xs font-semibold text-white shadow-2xs">
-              Laporan Anda
-            </div>
+          <div className="flex flex-col min-w-0">
             <ItemCard
               item={myItem}
+              roleBadge="Laporan Anda"
               returnVerifications={returnVerifications}
               currentUserEmail={currentUserEmail}
               currentUserId={currentUserId}
@@ -442,12 +440,10 @@ function MatchCard({
             />
           </div>
 
-          <div className="space-y-4 flex flex-col min-w-0">
-            <div className="w-full text-center py-1.5 px-2 rounded-sm bg-red-700 text-xs sm:text-xs font-semibold text-white shadow-2xs">
-              {matchedItem.type === "found" ? "Barang Temuan" : "Barang Hilang"}
-            </div>
+          <div className="flex flex-col min-w-0">
             <ItemCard
               item={matchedItem}
+              roleBadge={matchedItem.type === "found" ? "Barang Temuan" : "Barang Hilang"}
               returnVerifications={returnVerifications}
               currentUserEmail={currentUserEmail}
               currentUserId={currentUserId}

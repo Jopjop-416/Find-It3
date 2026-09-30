@@ -34,6 +34,7 @@ import {
 
 export interface ItemCardProps {
   item: any;
+  roleBadge?: string;
   returnVerifications?: ItemReturnVerification[];
   canUpdateStatus?: boolean;
   currentUserEmail?: string;
@@ -51,6 +52,7 @@ export interface ItemCardProps {
 
 export function ItemCardDetail({
   item,
+  roleBadge,
   returnVerifications = [],
   canUpdateStatus = false,
   currentUserEmail = "",
@@ -93,6 +95,11 @@ export function ItemCardDetail({
         </div>
 
         <div className="flex flex-wrap gap-2">
+          {roleBadge && (
+            <Badge variant="secondary" className="rounded-xs">
+              {roleBadge}
+            </Badge>
+          )}
           <Badge
             variant={item.type === "lost" ? "destructive" : "default"}
             className="rounded-xs"
@@ -303,6 +310,7 @@ export function ItemCardDetail({
 
 export function ItemCard({
   item,
+  roleBadge,
   returnVerifications = [],
   canUpdateStatus = false,
   currentUserEmail = "",
@@ -353,6 +361,15 @@ export function ItemCard({
             >
               <span className="line-clamp-1 break-all">{item.category}</span>
             </Badge>
+
+            {roleBadge && (
+              <Badge
+                variant="secondary"
+                className="absolute bottom-2 right-2 max-w-[55%] rounded-[2px] bg-white/95 text-gray-800 hover:bg-white text-[10px] px-1.5 py-0.5 sm:bottom-2.5 sm:right-2.5 sm:px-2 shadow-xs"
+              >
+                <span className="line-clamp-1 break-all">{roleBadge}</span>
+              </Badge>
+            )}
           </div>
 
           <div
@@ -396,6 +413,7 @@ export function ItemCard({
       <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto rounded-sm">
         <ItemCardDetail
           item={item}
+          roleBadge={roleBadge}
           returnVerifications={returnVerifications}
           canUpdateStatus={canUpdateStatus}
           currentUserEmail={currentUserEmail}

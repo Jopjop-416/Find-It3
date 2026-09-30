@@ -199,4 +199,13 @@ describe("ItemCard", () => {
     expect(markup).toContain("text-xs");
     expect(markup).toContain('aria-label="Opsi Laporan"');
   });
+
+  it("renders roleBadge at bottom-right of the card image when provided", () => {
+    const markup = renderToStaticMarkup(
+      <ItemCard item={sampleLostItem} roleBadge="Laporan Anda" />,
+    );
+
+    expect(markup).toContain("Laporan Anda");
+    expect(markup).toContain("absolute bottom-2 right-2");
+  });
 });
