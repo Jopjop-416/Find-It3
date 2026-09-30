@@ -164,7 +164,7 @@ export function NotificationCenter({ notifications, onMarkAsRead, onDeleteNotifi
                   variant="ghost"
                   size="sm"
                   onClick={() => handleDelete(notification.id)}
-                  className="absolute right-4 top-4 rounded-sm text-red-600 hover:text-red-700 hover:bg-red-50 sm:hidden"
+                  className="absolute right-4 top-4 h-8 w-8 rounded-full p-0 text-red-600 hover:text-red-700 hover:bg-red-50 sm:hidden"
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -208,7 +208,7 @@ export function NotificationCenter({ notifications, onMarkAsRead, onDeleteNotifi
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDelete(notification.id)}
-                      className="hidden rounded-sm text-red-600 hover:text-red-700 hover:bg-red-50 sm:inline-flex"
+                      className="hidden h-8 w-8 rounded-full p-0 text-red-600 hover:text-red-700 hover:bg-red-50 sm:inline-flex"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -231,7 +231,7 @@ export function NotificationCenter({ notifications, onMarkAsRead, onDeleteNotifi
                   variant="ghost"
                   size="sm"
                   onClick={() => handleDelete(notification.id)}
-                  className="absolute right-4 top-4 rounded-sm text-red-600 hover:text-red-700 hover:bg-red-50 sm:hidden"
+                  className="absolute right-4 top-4 h-8 w-8 rounded-full p-0 text-red-600 hover:text-red-700 hover:bg-red-50 sm:hidden"
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -269,7 +269,7 @@ export function NotificationCenter({ notifications, onMarkAsRead, onDeleteNotifi
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDelete(notification.id)}
-                      className="hidden rounded-sm text-red-600 hover:text-red-700 hover:bg-red-50 sm:inline-flex"
+                      className="hidden h-8 w-8 rounded-full p-0 text-red-600 hover:text-red-700 hover:bg-red-50 sm:inline-flex"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>

@@ -34,8 +34,8 @@ describe("NotificationCenter", () => {
     expect(markup).toContain("sm:w-auto");
     expect(markup).toContain("flex flex-wrap items-center gap-2");
     expect(markup).toContain("Lihat Kecocokan");
-    expect(markup).toContain("absolute right-4 top-4 rounded-sm text-red-600 hover:text-red-700 hover:bg-red-50 sm:hidden");
-    expect(markup).toContain("hidden rounded-sm text-red-600 hover:text-red-700 hover:bg-red-50 sm:inline-flex");
+    expect(markup).toContain("absolute right-4 top-4 h-8 w-8 rounded-full p-0 text-red-600 hover:text-red-700 hover:bg-red-50 sm:hidden");
+    expect(markup).toContain("hidden h-8 w-8 rounded-full p-0 text-red-600 hover:text-red-700 hover:bg-red-50 sm:inline-flex");
   });
 
   it("renders read notifications under Riwayat Notifikasi with delete actions", () => {

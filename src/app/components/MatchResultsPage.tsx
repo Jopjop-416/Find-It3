@@ -282,7 +282,7 @@ function MatchCard({
           }}
           title="Bukan Barang Saya"
           aria-label="Bukan Barang Saya"
-          className="absolute top-3 right-3 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white text-red-600 shadow-md border border-red-200 transition-all hover:bg-red-50 hover:scale-105 active:scale-95 focus:outline-hidden"
+          className="absolute top-3 right-3 z-20 flex h-8 w-8 items-center justify-center rounded-full text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors focus:outline-hidden"
         >
           <Trash2 className="h-4 w-4 text-red-600" />
         </button>
