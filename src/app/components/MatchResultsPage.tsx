@@ -33,20 +33,20 @@ interface MatchResultsPageProps {
 function MatchStatusBadge({ score }: { score: number }) {
   if (score >= 80) {
     return (
-      <Badge className="rounded-sm bg-emerald-600 text-white hover:bg-emerald-600 text-xs px-2 py-0.5 shadow-xs border border-white/20">
+      <Badge className="rounded-[2px] bg-emerald-600 text-white hover:bg-emerald-600 text-xs px-2 py-0.5 shadow-xs border border-white/20">
         ✓ Kecocokan Kuat
       </Badge>
     );
   }
   if (score >= 65) {
     return (
-      <Badge className="rounded-sm bg-amber-500 text-white hover:bg-amber-500 text-xs px-2 py-0.5 shadow-xs">
+      <Badge className="rounded-[2px] bg-amber-500 text-white hover:bg-amber-500 text-xs px-2 py-0.5 shadow-xs">
         ~ Kemungkinan Cocok
       </Badge>
     );
   }
   return (
-    <Badge variant="outline" className="rounded-sm text-xs px-2 py-0.5 bg-white text-gray-800 shadow-xs">
+    <Badge variant="outline" className="rounded-[2px] text-xs px-2 py-0.5 bg-white text-gray-800 shadow-xs">
       Kandidat
     </Badge>
   );
@@ -57,7 +57,7 @@ function AlgorithmBadge({ version }: { version: string | null | undefined }) {
   return (
     <Badge
       variant="outline"
-      className={`rounded-sm text-xs flex items-center gap-1 px-2 py-0.5 bg-white shadow-xs ${
+      className={`rounded-[2px] text-xs flex items-center gap-1 px-2 py-0.5 bg-white shadow-xs ${
         isAI
           ? "border-gray-500 text-gray-600"
           : "border-gray-300 text-gray-700"
@@ -336,7 +336,7 @@ function MatchCard({
           <div className="relative z-10 space-y-2.5">
             {/* Badges: % Cocok, MatchStatusBadge, AlgorithmBadge */}
             <div className="flex flex-wrap items-center justify-center gap-2">
-              <Badge className="rounded-sm bg-black text-white hover:bg-black text-xs px-2.5 py-0.5 shadow-xs">
+              <Badge className="rounded-[2px] bg-black text-white hover:bg-black text-xs px-2.5 py-0.5 shadow-xs">
                 {match.score}% cocok
               </Badge>
               <MatchStatusBadge score={match.score} />
